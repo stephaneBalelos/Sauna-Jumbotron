@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=1920">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     @font-face {
       font-family: 'ClashDisplay-Variable';
@@ -16,7 +16,7 @@
       font-display: swap;
       font-style: normal;
     }
-    html, body { margin: 0; padding: 0; background: #ece6dc; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; color: #2b2720; }
+    html, body { margin: 0; padding: 0; background: #ece6dc; overflow: hidden; font-family: 'Poppins', system-ui, sans-serif; color: #2b2720; }
     * { box-sizing: border-box; }
     #root { width: 100vw; height: 100vh; }
     @keyframes pulse {
@@ -325,7 +325,7 @@ function PlaceholderPhoto({ label, tone = "warm", style }) {
 function SectionLabel({ children, style }) {
   return (
     <div style={{
-      fontFamily: "'Inter', sans-serif",
+      fontFamily: "'Poppins', sans-serif",
       fontSize: 13, fontWeight: 500, letterSpacing: "0.22em",
       textTransform: "uppercase", color: "rgba(40,35,28,0.45)",
       ...style
@@ -356,7 +356,7 @@ function TopBar({ onRefresh }) {
           fontWeight: 300, fontSize: 30, letterSpacing: "0.34em", color: "#2b2720"
         }}>SAUNAHUUS</div>
         <div style={{
-          fontFamily: "'Inter', sans-serif", fontSize: 12, fontWeight: 500,
+          fontFamily: "'Poppins', sans-serif", fontSize: 12, fontWeight: 500,
           letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(40,35,28,0.45)"
         }}>Status · Aushang</div>
       </div>
@@ -368,7 +368,7 @@ function TopBar({ onRefresh }) {
             animation: "pulse 2s ease-in-out infinite", display: "inline-block"
           }} />
           <span style={{
-            fontFamily: "'Inter', sans-serif", fontSize: 12, fontWeight: 500,
+            fontFamily: "'Poppins', sans-serif", fontSize: 12, fontWeight: 500,
             letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(40,35,28,0.55)"
           }}>Live · aktualisiert gerade eben</span>
         </div>
@@ -425,7 +425,7 @@ function ClockBlock() {
           <span style={{ fontSize: 32, color: ACCENT, marginLeft: 10, fontVariantNumeric: "tabular-nums" }}>:{ss}</span>
         </div>
         <div style={{
-          marginTop: 10, fontFamily: "'Inter', sans-serif", fontSize: 18,
+          marginTop: 10, fontFamily: "'Poppins', sans-serif", fontSize: 18,
           color: "rgba(40,35,28,0.65)"
         }}>{date}</div>
       </div>
@@ -494,7 +494,7 @@ function WeatherBlock({ refreshKey }) {
       </div>
       <div style={{
         display: "flex", alignItems: "baseline", justifyContent: "space-between",
-        fontFamily: "'Inter', sans-serif", fontSize: 16
+        fontFamily: "'Poppins', sans-serif", fontSize: 16
       }}>
         <span style={{ color: "#2b2720" }}>{conditionDe}</span>
         <span style={{ color: "rgba(40,35,28,0.55)", fontVariantNumeric: "tabular-nums" }}>
@@ -628,7 +628,7 @@ function LoadHero({ level }) {
         </div>
         <div style={{
           marginTop: 12,
-          fontFamily: "'Inter', sans-serif", fontSize: 17, lineHeight: 1.55,
+          fontFamily: "'Poppins', sans-serif", fontSize: 17, lineHeight: 1.55,
           color: "rgba(40,35,28,0.65)", maxWidth: 620
         }}>
           {level.body}
@@ -718,7 +718,7 @@ function NewsSlideshow({ news, seconds }) {
         }}>
           {item.kicker && (
             <div style={{
-              fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 500,
+              fontFamily: "'Poppins', sans-serif", fontSize: 13, fontWeight: 500,
               letterSpacing: "0.24em", textTransform: "uppercase", color: ACCENT
             }}>{item.kicker}</div>
           )}
@@ -729,12 +729,12 @@ function NewsSlideshow({ news, seconds }) {
           }}>{item.title}</div>
           <div style={{
             marginTop: 22,
-            fontFamily: "'Inter', sans-serif", fontSize: 17, lineHeight: 1.55,
+            fontFamily: "'Poppins', sans-serif", fontSize: 17, lineHeight: 1.55,
             color: "rgba(40,35,28,0.72)", textWrap: "pretty"
           }}>{item.body}</div>
           <div style={{
             marginTop: 28, display: "flex", alignItems: "center", gap: 14,
-            fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 500,
+            fontFamily: "'Poppins', sans-serif", fontSize: 13, fontWeight: 500,
             letterSpacing: "0.22em", textTransform: "uppercase",
             color: "rgba(40,35,28,0.45)"
           }}>
@@ -765,7 +765,7 @@ function AufgussBlock() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <SectionLabel>Aufgussplan heute</SectionLabel>
         <span style={{
-          fontFamily: "'Inter', sans-serif", fontSize: 12, fontWeight: 500,
+          fontFamily: "'Poppins', sans-serif", fontSize: 12, fontWeight: 500,
           letterSpacing: "0.22em", textTransform: "uppercase", color: ACCENT
         }}>Jetzt läuft</span>
       </div>
@@ -789,7 +789,7 @@ function AufgussBlock() {
                 textDecoration: past ? "line-through" : "none"
               }}>{a.time}</div>
               <div style={{
-                fontFamily: "'Inter', sans-serif", fontSize: 16,
+                fontFamily: "'Poppins', sans-serif", fontSize: 16,
                 color: "#2b2720", display: "flex", alignItems: "center", gap: 12
               }}>
                 {a.name}
@@ -802,7 +802,7 @@ function AufgussBlock() {
                 )}
               </div>
               <div style={{
-                fontFamily: "'Inter', sans-serif", fontSize: 13,
+                fontFamily: "'Poppins', sans-serif", fontSize: 13,
                 letterSpacing: "0.08em", color: "rgba(40,35,28,0.5)"
               }}>{a.room}</div>
             </div>
@@ -858,7 +858,7 @@ function ClosingBlock({ opening }) {
         {!isClosed && opening && opening.details && (
           <div style={{
             marginTop: 14,
-            fontFamily: "'Inter', sans-serif", fontSize: 15, lineHeight: 1.5,
+            fontFamily: "'Poppins', sans-serif", fontSize: 15, lineHeight: 1.5,
             color: "rgba(40,35,28,0.72)"
           }}>
             {opening.details}
@@ -867,7 +867,7 @@ function ClosingBlock({ opening }) {
         {!opening && (
           <div style={{
             marginTop: 14,
-            fontFamily: "'Inter', sans-serif", fontSize: 15, lineHeight: 1.5,
+            fontFamily: "'Poppins', sans-serif", fontSize: 15, lineHeight: 1.5,
             color: "rgba(40,35,28,0.72)"
           }}>
             Letzter Einlass um 21:00 · Saunagänge bis 21:30.
@@ -879,7 +879,7 @@ function ClosingBlock({ opening }) {
         <div style={{
           paddingTop: 14, borderTop: "1px solid rgba(40,35,28,0.12)",
           display: "flex", alignItems: "baseline", justifyContent: "space-between",
-          fontFamily: "'Inter', sans-serif", fontSize: 13,
+          fontFamily: "'Poppins', sans-serif", fontSize: 13,
           letterSpacing: "0.08em", color: "rgba(40,35,28,0.6)"
         }}>
           <span>Noch geöffnet</span>
@@ -921,7 +921,7 @@ function StaffMessageBlock() {
       </div>
       <div style={{
         display: "flex", alignItems: "center", gap: 14,
-        fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 500,
+        fontFamily: "'Poppins', sans-serif", fontSize: 13, fontWeight: 500,
         letterSpacing: "0.22em", textTransform: "uppercase",
         color: "rgba(245,237,227,0.55)"
       }}>
