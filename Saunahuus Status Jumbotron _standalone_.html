@@ -6,8 +6,16 @@
   <meta name="viewport" content="width=1920">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
+    @font-face {
+      font-family: 'ClashDisplay-Variable';
+      src: url('fonts/ClashDisplay-Variable.woff2') format('woff2'),
+           url('fonts/ClashDisplay-Variable.woff') format('woff');
+      font-weight: 200 700;
+      font-display: swap;
+      font-style: normal;
+    }
     html, body { margin: 0; padding: 0; background: #ece6dc; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; color: #2b2720; }
     * { box-sizing: border-box; }
     #root { width: 100vw; height: 100vh; }
@@ -171,7 +179,7 @@ function TopBar() {
     }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 18 }}>
         <div style={{
-          fontFamily: "'Cormorant Garamond', serif",
+          fontFamily: "'ClashDisplay-Variable', sans-serif",
           fontWeight: 300, fontSize: 30, letterSpacing: "0.34em", color: "#2b2720"
         }}>SAUNAHUUS</div>
         <div style={{
@@ -213,7 +221,7 @@ function ClockBlock() {
       <SectionLabel>Uhrzeit</SectionLabel>
       <div>
         <div style={{
-          fontFamily: "'Cormorant Garamond', serif",
+          fontFamily: "'ClashDisplay-Variable', sans-serif",
           fontWeight: 300, fontSize: 96, lineHeight: 0.95, letterSpacing: "-0.01em",
           color: "#2b2720", fontVariantNumeric: "tabular-nums",
           display: "flex", alignItems: "baseline", gap: 2
@@ -281,12 +289,12 @@ function WeatherBlock() {
         <WeatherGlyph kind={condition} size={88} />
         <div style={{ display: "flex", alignItems: "baseline" }}>
           <span style={{
-            fontFamily: "'Cormorant Garamond', serif", fontWeight: 300,
+            fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
             fontSize: 96, lineHeight: 0.95, letterSpacing: "-0.02em",
             color: "#2b2720", fontVariantNumeric: "tabular-nums"
           }}>{temp}</span>
           <span style={{
-            fontFamily: "'Cormorant Garamond', serif", fontWeight: 300,
+            fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
             fontSize: 48, color: ACCENT, marginLeft: 4
           }}>°C</span>
         </div>
@@ -361,7 +369,7 @@ function LoadHero({ load }) {
         </SectionLabel>
         <div style={{
           marginTop: 12,
-          fontFamily: "'Cormorant Garamond', serif", fontWeight: 300,
+          fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
           fontSize: 104, lineHeight: 1, letterSpacing: "-0.015em",
           color: level.color
         }}>
@@ -369,7 +377,7 @@ function LoadHero({ load }) {
         </div>
         <div style={{
           marginTop: 20,
-          fontFamily: "'Cormorant Garamond', serif", fontWeight: 300,
+          fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
           fontSize: 32, lineHeight: 1.25, color: "#2b2720", maxWidth: 640
         }}>
           {level.head}
@@ -457,7 +465,7 @@ function NewsSlideshow({ seconds }) {
           }}>{item.kicker}</div>
           <div style={{
             marginTop: 18,
-            fontFamily: "'Cormorant Garamond', serif", fontWeight: 300,
+            fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
             fontSize: 48, lineHeight: 1.1, color: ACCENT, letterSpacing: "-0.005em"
           }}>{item.title}</div>
           <div style={{
@@ -516,7 +524,7 @@ function AufgussBlock() {
               opacity: past ? 0.38 : 1
             }}>
               <div style={{
-                fontFamily: "'Cormorant Garamond', serif", fontWeight: 300,
+                fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
                 fontSize: 26, color: now ? ACCENT : "#2b2720",
                 fontVariantNumeric: "tabular-nums",
                 textDecoration: past ? "line-through" : "none"
@@ -567,7 +575,7 @@ function ClosingBlock() {
       <SectionLabel>Öffnungszeiten heute</SectionLabel>
       <div>
         <div style={{
-          fontFamily: "'Cormorant Garamond', serif", fontWeight: 300,
+          fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
           fontSize: 56, lineHeight: 1, color: ACCENT, fontVariantNumeric: "tabular-nums"
         }}>
           09:00 — 22:00
@@ -588,7 +596,7 @@ function ClosingBlock() {
       }}>
         <span>Noch geöffnet</span>
         <span style={{
-          fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 300,
+          fontFamily: "'ClashDisplay-Variable', sans-serif", fontSize: 24, fontWeight: 300,
           color: "#2b2720", fontVariantNumeric: "tabular-nums"
         }}>{h} Std {String(m).padStart(2, "0")} Min</span>
       </div>
@@ -615,7 +623,7 @@ function StaffMessageBlock() {
       }} />
       <SectionLabel style={{ color: "rgba(245,237,227,0.55)" }}>Gruß vom Team</SectionLabel>
       <div style={{
-        fontFamily: "'Cormorant Garamond', serif", fontWeight: 300,
+        fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
         fontSize: 30, lineHeight: 1.25, letterSpacing: "-0.005em",
         textWrap: "pretty"
       }}>
