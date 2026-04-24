@@ -64,11 +64,12 @@ const CONFIG = {
 // ── Data ─────────────────────────────────────────────────────────────────────
 
 const AUFGUSS = [
-  { time: "14:00", name: "Birke & Honig",    room: "Finnische Sauna", status: "past"     },
-  { time: "15:30", name: "Zirbe Alpenluft",  room: "Bio-Sauna",       status: "now"      },
-  { time: "17:00", name: "Eukalyptus Klassik",room:"Finnische Sauna", status: "next"     },
-  { time: "18:30", name: "Lavendel & Minze", room: "Dampfbad",        status: "upcoming" },
-  { time: "20:00", name: "Zitrus Frische",   room: "Finnische Sauna", status: "upcoming" },
+  { time: "12:00", name: "Start",    room: "Finnische Sauna",     },
+  { time: "14:00", name: "Birke & Honig",    room: "Finnische Sauna",     },
+  { time: "15:30", name: "Zirbe Alpenluft",  room: "Bio-Sauna",            },
+  { time: "17:00", name: "Eukalyptus Klassik",room:"Finnische Sauna",     },
+  { time: "18:00", name: "Zitrus Frische",   room: "Finnische Sauna", },
+  { time: "22:00", name: "Abendruhe",        room: "Finnische Sauna", },
 ];
 
 // Fallback shown while the first fetch is in flight or if the network is unavailable.
@@ -757,6 +758,38 @@ function NewsSlideshow({ news, seconds }) {
 // ── AufgussBlock ──────────────────────────────────────────────────────────────
 
 function AufgussBlock() {
+  const clock = useClock();
+
+  const toMinutes = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+  const currentMinutes = clock.getHours() * 60 + clock.getMinutes();
+
+  // Derive status: "now" for 15 min after start, "gleich" for 10 min before start
+  const items = AUFGUSS.map((a) => {
+    const start = toMinutes(a.time);
+    let status;
+    if      (currentMinutes >= start + 15) status = "past";
+    else if (currentMinutes >= start)      status = "now";
+    else if (currentMinutes >= start - 10) status = "gleich";
+    else                                   status = "upcoming";
+    return { ...a, status };
+  });
+
+  // Anchor for window: first "now", else first "gleich", else last "past", else 0
+  let anchorIndex = items.findIndex(a => a.status === "now");
+  if (anchorIndex === -1) anchorIndex = items.findIndex(a => a.status === "gleich");
+  if (anchorIndex === -1) {
+    const lastPastIdx = items.reduce((acc, a, i) => a.status === "past" ? i : acc, -1);
+    anchorIndex = lastPastIdx >= 0 ? lastPastIdx : 0;
+  }
+
+  // Window of 5: keep anchor at position 2 (index 1) when possible
+  let windowStart = Math.max(0, anchorIndex - 1);
+  windowStart = Math.min(windowStart, Math.max(0, items.length - 5));
+  const displayed = items.slice(windowStart, windowStart + 5);
+
+  const hasNow   = items.some(a => a.status === "now");
+  const hasGleich = !hasNow && items.some(a => a.status === "gleich");
+
   return (
     <div style={{
       gridArea: "aufguss",
@@ -768,17 +801,27 @@ function AufgussBlock() {
     }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <SectionLabel>Aufgussplan heute</SectionLabel>
-        <span style={{
-          fontFamily: "'Poppins', sans-serif", fontSize: 12, fontWeight: 500,
-          letterSpacing: "0.22em", textTransform: "uppercase", color: ACCENT
-        }}>Jetzt läuft</span>
+        {hasNow && (
+          <span style={{
+            fontFamily: "'Poppins', sans-serif", fontSize: 12, fontWeight: 500,
+            letterSpacing: "0.22em", textTransform: "uppercase", color: ACCENT
+          }}>Jetzt läuft</span>
+        )}
+        {hasGleich && (
+          <span style={{
+            fontFamily: "'Poppins', sans-serif", fontSize: 12, fontWeight: 500,
+            letterSpacing: "0.22em", textTransform: "uppercase", color: "oklch(0.65 0.14 78)"
+          }}>Startet gleich</span>
+        )}
       </div>
       <div style={{ marginTop: 14, flex: 1, display: "flex", flexDirection: "column" }}>
-        {AUFGUSS.map((a, i) => {
-          const past = a.status === "past";
-          const now  = a.status === "now";
+        {displayed.map((a, i) => {
+          const past   = a.status === "past";
+          const isNow  = a.status === "now";
+          const gleich = a.status === "gleich";
+          const timeColor = isNow ? ACCENT : gleich ? "oklch(0.65 0.14 78)" : "#2b2720";
           return (
-            <div key={i} style={{
+            <div key={windowStart + i} style={{
               display: "grid",
               gridTemplateColumns: "84px 1fr auto",
               alignItems: "baseline",
@@ -788,7 +831,7 @@ function AufgussBlock() {
             }}>
               <div style={{
                 fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
-                fontSize: 26, color: now ? ACCENT : "#2b2720",
+                fontSize: 26, color: timeColor,
                 fontVariantNumeric: "tabular-nums",
                 textDecoration: past ? "line-through" : "none"
               }}>{a.time}</div>
@@ -797,12 +840,19 @@ function AufgussBlock() {
                 color: "#2b2720", display: "flex", alignItems: "center", gap: 12
               }}>
                 {a.name}
-                {now && (
+                {isNow && (
                   <span style={{
                     fontSize: 10, fontWeight: 600, letterSpacing: "0.2em",
                     textTransform: "uppercase", color: ACCENT,
                     padding: "3px 8px", border: `1px solid ${ACCENT}`, borderRadius: 2
                   }}>Läuft</span>
+                )}
+                {gleich && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 600, letterSpacing: "0.2em",
+                    textTransform: "uppercase", color: "oklch(0.65 0.14 78)",
+                    padding: "3px 8px", border: "1px solid oklch(0.65 0.14 78)", borderRadius: 2
+                  }}>Gleich</span>
                 )}
               </div>
               <div style={{
