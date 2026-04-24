@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Saunahuus · Status</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #ece6dc; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; color: #2b2720; }
+  * { box-sizing: border-box; }
+  #root { width: 100vw; height: 100vh; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 4px rgba(79,178,107,0.18); }
+    50%      { opacity: 0.7; box-shadow: 0 0 0 8px rgba(79,178,107,0.05); }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<template id="__bundler_thumbnail" data-bg-color="#ece6dc">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#ece6dc"/>
+    <rect x="500" y="180" width="200" height="380" rx="18" fill="#1c1a16"/>
+    <circle cx="600" cy="250" r="44" fill="#2a2520"/>
+    <circle cx="600" cy="370" r="44" fill="#2a2520"/>
+    <circle cx="600" cy="490" r="44" fill="#4fb26b"/>
+    <text x="600" y="660" text-anchor="middle" font-family="Cormorant Garamond, Georgia, serif" font-weight="300" font-size="52" fill="#2b2720" letter-spacing="10">SAUNAHUUS</text>
+    <text x="600" y="705" text-anchor="middle" font-family="Inter, sans-serif" font-weight="500" font-size="16" fill="#9a8f82" letter-spacing="6">STATUS · AUSHANG</text>
+  </svg>
+</template>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+</body>
+</html>
