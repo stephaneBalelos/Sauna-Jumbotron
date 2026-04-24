@@ -52,6 +52,7 @@ const CONFIG = {
   load:             "gruen",   // fallback when loadApiUrl is unset or unavailable: "gruen" | "gelb" | "rot"
   loadApiUrl:       "https://n8n2.stephanedondyas.cloud/webhook/7a626ab6-5ee0-4320-b530-81fa012c7d5e",        // URL returning { status: "gruen"|"gelb"|"rot", label, head, body }
   accentHex:        "#D87A7A", // accent colour (pinkish-red by default)
+  logoUrl:          "https://cdn.prod.website-files.com/66b1df72c5f8c23c973ec3e2/66c721715f80b6d218e15734_logo-saunahuus.png.webp",        // URL of the logo image shown in the top bar; leave empty to show text fallback
   slideshowSeconds: 7,         // seconds per news slide
   // 53.03308452669527, 8.55818828907121, Saunahuus Ganderkesee
   weatherLat:       53.0330845,
@@ -348,16 +349,19 @@ function TopBar({ onRefresh }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "32px 64px 0"
+      padding: "16px 64px 0"
     }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 18 }}>
-        <div style={{
-          fontFamily: "'ClashDisplay-Variable', sans-serif",
-          fontWeight: 300, fontSize: 30, letterSpacing: "0.34em", color: "#2b2720"
-        }}>SAUNAHUUS</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+        {CONFIG.logoUrl
+          ? <img src={CONFIG.logoUrl} alt="Logo" style={{ height: 40, width: "auto", display: "block" }} />
+          : <div style={{
+              fontFamily: "'ClashDisplay-Variable', sans-serif",
+              fontWeight: 300, fontSize: 30, letterSpacing: "0.34em", color: "#2b2720"
+            }}>SAUNAHUUS</div>
+        }
         <div style={{
           fontFamily: "'Poppins', sans-serif", fontSize: 12, fontWeight: 500,
-          letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(40,35,28,0.45)"
+          letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(40,35,28,0.45)",
         }}>Status · Aushang</div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
@@ -594,7 +598,7 @@ function LoadHero({ level }) {
       gridArea: "load",
       position: "relative",
       display: "flex", alignItems: "center", gap: 56,
-      padding: "56px 72px",
+      padding: "56px 40px",
       background: level.soft,
       border: `1px solid ${level.ring}`,
       borderRadius: 4,
@@ -960,9 +964,9 @@ function App() {
 
           {/* Main grid */}
           <div style={{
-            padding: "28px 64px 0",
+            padding: "28px 48px 0",
             display: "grid",
-            gridTemplateColumns: hasNews ? "1.15fr 1fr" : "1fr",
+            gridTemplateColumns: hasNews ? "1.1fr 1fr" : "1fr",
             gridTemplateRows: "auto 1fr",
             gridTemplateAreas: hasNews
               ? `"load news" "meta news"`
@@ -988,7 +992,7 @@ function App() {
 
           {/* Bottom rail */}
           <div style={{
-            padding: "22px 64px 36px",
+            padding: "22px 48px 36px",
             display: "grid",
             gridTemplateColumns: "1.4fr 0.85fr 1.1fr",
             gridTemplateAreas: `"aufguss closing staff"`,
