@@ -54,6 +54,7 @@ const CONFIG = {
   accentHex:        "#D87A7A", // accent colour (pinkish-red by default)
   logoUrl:          "https://cdn.prod.website-files.com/66b1df72c5f8c23c973ec3e2/66c721715f80b6d218e15734_logo-saunahuus.png.webp",        // URL of the logo image shown in the top bar; leave empty to show text fallback
   slideshowSeconds: 7,         // seconds per news slide
+  showAufgussplan: false,       // set to false to hide the Aufgussplan column
   // 53.03308452669527, 8.55818828907121, Saunahuus Ganderkesee
   weatherLat:       53.0330845,
   weatherLon:       8.5581883,
@@ -1008,7 +1009,9 @@ function App() {
           transform: `scale(${scale})`, transformOrigin: "top left",
           position: "absolute", top: 0, left: 0,
           background: "#faf8f4",
-          "--accent": CONFIG.accentHex
+          "--accent": CONFIG.accentHex,
+          display: "flex", flexDirection: "column",
+          
         }}>
           <TopBar onRefresh={handleRefresh} />
 
@@ -1044,12 +1047,12 @@ function App() {
           <div style={{
             padding: "22px 48px 36px",
             display: "grid",
-            gridTemplateColumns: "1.4fr 0.85fr 1.1fr",
-            gridTemplateAreas: `"aufguss closing staff"`,
+            gridTemplateColumns: CONFIG.showAufgussplan ? "1.4fr 0.85fr 1.1fr" : "1fr 1.3fr",
+            gridTemplateAreas: CONFIG.showAufgussplan ? `"aufguss closing staff"` : `"closing staff"`,
             gap: 22,
             height: 300
           }}>
-            <AufgussBlock />
+            {CONFIG.showAufgussplan && <AufgussBlock />}
             <ClosingBlock opening={opening} />
             <StaffMessageBlock />
           </div>
