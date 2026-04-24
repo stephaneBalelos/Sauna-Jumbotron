@@ -59,7 +59,8 @@ const CONFIG = {
   weatherLat:       53.0330845,
   weatherLon:       8.5581883,
   newsApiUrl:       "https://n8n2.stephanedondyas.cloud/webhook/8fe2c340-13ee-485d-8c66-710c2ef83178",        // URL returning [{lastPublished, title, body, kicker?, caption?, image?}]
-  openingTimesApiUrl: "https://n8n2.stephanedondyas.cloud/webhook/0750df34-82c9-4cad-b72b-f9f630b68ab8",                             // URL returning [{zeitraum, details, "tage-der-woche"}]
+  openingTimesApiUrl:  "https://n8n2.stephanedondyas.cloud/webhook/0750df34-82c9-4cad-b72b-f9f630b68ab8",                             // URL returning [{zeitraum, details, "tage-der-woche"}]
+  staffMessagesApiUrl: "https://n8n2.stephanedondyas.cloud/webhook/b5c6baa1-4d50-49ec-bb78-7efa37f07f4e",                                                                                                            // URL returning [{label, message, signature}]; leave empty to use STAFF_MESSAGES fallback
 };
 
 // ── Data ─────────────────────────────────────────────────────────────────────
@@ -71,6 +72,24 @@ const AUFGUSS = [
   { time: "17:00", name: "Eukalyptus Klassik",room:"Finnische Sauna",     },
   { time: "18:00", name: "Zitrus Frische",   room: "Finnische Sauna", },
   { time: "22:00", name: "Abendruhe",        room: "Finnische Sauna", },
+];
+
+const STAFF_MESSAGES = [
+  {
+    label:     "Empfehlung heute",
+    message:   "Nehmen Sie sich die Zeit, die Sie brauchen — und genießen Sie jeden Atemzug. Heute empfehlen wir die Birke & Honig um 14 Uhr.",
+    signature: "Marlene & Johann",
+  },
+  {
+    label:     "Gut zu wissen",
+    message:   "Bitte denken Sie daran, ausreichend Wasser zu trinken — an unserem Wasserspender stehen frische Aufgüsse bereit.",
+    signature: "Ihr Saunahuus-Team",
+  },
+  {
+    label:     "Herzlich willkommen",
+    message:   "Schön, dass Sie heute bei uns sind. Entspannen Sie sich in aller Ruhe — wir sind für Sie da.",
+    signature: "Das Saunahuus-Team",
+  },
 ];
 
 // Fallback shown while the first fetch is in flight or if the network is unavailable.
@@ -241,7 +260,7 @@ function useLoadLevel(refreshKey) {
     }
 
     fetchLoad();
-    const id = setInterval(fetchLoad, 2 * 60 * 1000); // refresh every 2 min
+    const id = setInterval(fetchLoad, 1 * 60 * 1000); // refresh every 1 min
     return () => clearInterval(id);
   }, [refreshKey]);
 
@@ -298,6 +317,33 @@ function useOpeningTimes(refreshKey) {
   }, [refreshKey]);
 
   return opening;
+}
+
+function useStaffMessages(refreshKey) {
+  const initial = !CONFIG.staffMessagesApiUrl && STAFF_MESSAGES.length > 0 ? STAFF_MESSAGES : null;
+  const [messages, setMessages] = React.useState(initial);
+
+  React.useEffect(() => {
+    if (!CONFIG.staffMessagesApiUrl) return;
+
+    async function fetchMessages() {
+      try {
+        const res = await fetch(CONFIG.staffMessagesApiUrl);
+        if (!res.ok) throw new Error("fetch failed");
+        const data = await res.json();
+        const items = Array.isArray(data) ? data : (data.data || []);
+        setMessages(items.length > 0 ? items : null);
+      } catch {
+        setMessages(null);
+      }
+    }
+
+    fetchMessages();
+    const id = setInterval(fetchMessages, 5 * 60 * 1000); // refresh every 5 min
+    return () => clearInterval(id);
+  }, [refreshKey]);
+
+  return messages;
 }
 
 // ── Primitives ────────────────────────────────────────────────────────────────
@@ -951,37 +997,78 @@ function ClosingBlock({ opening }) {
 
 // ── StaffMessageBlock ─────────────────────────────────────────────────────────
 
-function StaffMessageBlock() {
+function StaffMessageBlock({ messages }) {
+  const [idx, setIdx] = React.useState(0);
+
+  React.useEffect(() => { setIdx(0); }, [messages]);
+
+  React.useEffect(() => {
+    if (messages.length <= 1) return;
+    const id = setInterval(() => setIdx(i => (i + 1) % messages.length), CONFIG.slideshowSeconds * 1000);
+    return () => clearInterval(id);
+  }, [messages]);
+
+  const safeIdx = idx % messages.length;
+  const item = messages[safeIdx];
+
   return (
     <div style={{
       gridArea: "staff",
       padding: "28px 32px",
       borderRadius: 4,
-      display: "flex", flexDirection: "column", justifyContent: "space-between",
+      display: "flex", flexDirection: "column",
       position: "relative", overflow: "hidden",
-      color: "rgb(245,237,227)", background: "rgb(69,12,32)"
+      color: "rgb(245,237,227)", background: "rgb(69,12,32)",
+      gap: 14
     }}>
       <div style={{
         position: "absolute", inset: 0,
         background: "radial-gradient(600px 200px at 100% 0%, rgba(216,122,122,0.22), transparent 60%)",
         pointerEvents: "none"
       }} />
-      <SectionLabel style={{ color: "rgba(245,237,227,0.55)" }}>Gruß vom Team</SectionLabel>
-      <div style={{
-        fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
-        fontSize: 30, lineHeight: 1.25, letterSpacing: "-0.005em",
-        textWrap: "pretty"
-      }}>
-        „Nehmen Sie sich die Zeit, die Sie brauchen — und genießen Sie jeden Atemzug. Heute empfehlen wir die Birke &amp; Honig um 14 Uhr."
+
+      {/* Fixed header + dot indicators */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
+        <SectionLabel style={{ color: "rgba(245,237,227,0.55)" }}>Gruß vom Team</SectionLabel>
+        {messages.length > 1 && (
+          <div style={{ display: "flex", gap: 5 }}>
+            {messages.map((_, i) => (
+              <div key={i} style={{
+                width: 6, height: 6, borderRadius: "50%",
+                background: i === safeIdx ? "rgba(245,237,227,0.75)" : "rgba(245,237,227,0.2)",
+                transition: "background 0.4s ease"
+              }} />
+            ))}
+          </div>
+        )}
       </div>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 14,
-        fontFamily: "'Poppins', sans-serif", fontSize: 13, fontWeight: 500,
-        letterSpacing: "0.22em", textTransform: "uppercase",
-        color: "rgba(245,237,227,0.55)"
+
+      {/* Animated slide content */}
+      <div key={safeIdx} style={{
+        flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between",
+        position: "relative",
+        animation: "slideInFromRight 0.5s cubic-bezier(0.22,1,0.36,1) both"
       }}>
-        <span style={{ width: 36, height: 1, background: "rgba(245,237,227,0.25)", display: "inline-block" }} />
-        <span>Ihr Saunahuus-Team · Marlene &amp; Johann</span>
+        <div style={{
+          fontFamily: "'Poppins', sans-serif", fontSize: 11, fontWeight: 500,
+          letterSpacing: "0.26em", textTransform: "uppercase", color: ACCENT
+        }}>{item.label}</div>
+        <div style={{
+          fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
+          fontSize: 28, lineHeight: 1.3, letterSpacing: "0.005em",
+          textWrap: "pretty"
+        }}>
+          „{item.message}"
+        </div>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 14,
+          fontFamily: "'Poppins', sans-serif", fontSize: 13, fontWeight: 500,
+          letterSpacing: "0.22em", textTransform: "uppercase",
+          color: "rgba(245,237,227,0.55)"
+        }}>
+          <span style={{ width: 36, height: 1, background: "rgba(245,237,227,0.25)", display: "inline-block" }} />
+          <span>{item.signature}</span>
+        </div>
       </div>
     </div>
   );
@@ -993,10 +1080,12 @@ function App() {
   const scale      = useStageScale();
   const [refreshKey, setRefreshKey] = React.useState(0);
   const handleRefresh = () => setRefreshKey(k => k + 1);
-  const news    = useNews(refreshKey);
-  const level   = useLoadLevel(refreshKey);
-  const opening = useOpeningTimes(refreshKey);
-  const hasNews = news !== null && news.length > 0;
+  const news           = useNews(refreshKey);
+  const level          = useLoadLevel(refreshKey);
+  const opening        = useOpeningTimes(refreshKey);
+  const staffMessages  = useStaffMessages(refreshKey);
+  const hasNews  = news !== null && news.length > 0;
+  const hasStaff = staffMessages !== null && staffMessages.length > 0;
 
   return (
     <div style={{
@@ -1047,14 +1136,18 @@ function App() {
           <div style={{
             padding: "22px 48px 36px",
             display: "grid",
-            gridTemplateColumns: CONFIG.showAufgussplan ? "1.4fr 0.85fr 1.1fr" : "1fr 1.3fr",
-            gridTemplateAreas: CONFIG.showAufgussplan ? `"aufguss closing staff"` : `"closing staff"`,
+            gridTemplateColumns: CONFIG.showAufgussplan
+              ? (hasStaff ? "1.4fr 0.85fr 1.1fr" : "1.4fr 1fr")
+              : (hasStaff ? "1fr 1.3fr"           : "1fr"),
+            gridTemplateAreas: CONFIG.showAufgussplan
+              ? (hasStaff ? `"aufguss closing staff"` : `"aufguss closing"`)
+              : (hasStaff ? `"closing staff"`          : `"closing"`),
             gap: 22,
             height: 300
           }}>
             {CONFIG.showAufgussplan && <AufgussBlock />}
             <ClosingBlock opening={opening} />
-            <StaffMessageBlock />
+            {hasStaff && <StaffMessageBlock messages={staffMessages} />}
           </div>
         </div>
       </div>
