@@ -40,6 +40,9 @@ const CONFIG = {
   load:             "gruen",   // "gruen" | "gelb" | "rot"
   accentHex:        "#D87A7A", // accent colour (pinkish-red by default)
   slideshowSeconds: 7,         // seconds per news slide
+  // 53.03308452669527, 8.55818828907121, Saunahuus Ganderkesee
+  weatherLat:       53.0330845, 
+  weatherLon:       8.5581883,
 };
 
 // ── Data ─────────────────────────────────────────────────────────────────────
@@ -76,8 +79,8 @@ const AUFGUSS = [
   { time: "20:00", name: "Zitrus Frische",   room: "Finnische Sauna", status: "upcoming" },
 ];
 
-// Static weather — replace with a live API call if desired.
-const WEATHER = { temp: 14, condition: "cloudy", conditionDe: "Bewölkt", hi: 17, lo: 9 };
+// Fallback shown while the first fetch is in flight or if the network is unavailable.
+const WEATHER_FALLBACK = { temp: "--", condition: "cloudy", conditionDe: "…", hi: "--", lo: "--" };
 
 const LOAD_LEVELS = {
   gruen: {
@@ -131,6 +134,58 @@ function useStageScale() {
     return () => window.removeEventListener("resize", fit);
   }, []);
   return scale;
+}
+
+// Maps WMO weather-code → { condition, conditionDe }
+// Open-Meteo uses WMO standard codes: https://open-meteo.com/en/docs#weathervariables
+function wmoToCondition(code) {
+  if (code === 0)                        return { condition: "sunny",  conditionDe: "Sonnig"         };
+  if (code === 1)                        return { condition: "sunny",  conditionDe: "Leicht bewölkt" };
+  if (code === 2 || code === 3)          return { condition: "cloudy", conditionDe: "Bewölkt"        };
+  if (code === 45 || code === 48)        return { condition: "cloudy", conditionDe: "Neblig"         };
+  if (code >= 51 && code <= 55)          return { condition: "rainy",  conditionDe: "Nieselregen"    };
+  if (code >= 61 && code <= 67)          return { condition: "rainy",  conditionDe: "Regen"          };
+  if (code >= 71 && code <= 77)          return { condition: "rainy",  conditionDe: "Schnee"         };
+  if (code >= 80 && code <= 82)          return { condition: "rainy",  conditionDe: "Regenschauer"   };
+  if (code >= 85 && code <= 86)          return { condition: "rainy",  conditionDe: "Schneeschauer"  };
+  if (code >= 95)                        return { condition: "rainy",  conditionDe: "Gewitter"       };
+  return { condition: "cloudy", conditionDe: "Bewölkt" };
+}
+
+function useWeather() {
+  const [weather, setWeather] = React.useState(WEATHER_FALLBACK);
+
+  React.useEffect(() => {
+    const url =
+      `https://api.open-meteo.com/v1/forecast` +
+      `?latitude=${CONFIG.weatherLat}&longitude=${CONFIG.weatherLon}` +
+      `&current=temperature_2m,weather_code` +
+      `&daily=temperature_2m_max,temperature_2m_min` +
+      `&timezone=auto&forecast_days=1`;
+
+    async function fetchWeather() {
+      try {
+        const res  = await fetch(url);
+        const data = await res.json();
+        const { condition, conditionDe } = wmoToCondition(data.current.weather_code);
+        setWeather({
+          temp:        Math.round(data.current.temperature_2m),
+          hi:          Math.round(data.daily.temperature_2m_max[0]),
+          lo:          Math.round(data.daily.temperature_2m_min[0]),
+          condition,
+          conditionDe,
+        });
+      } catch {
+        // keep whatever was last shown (or the fallback on first load)
+      }
+    }
+
+    fetchWeather();
+    const id = setInterval(fetchWeather, 10 * 60 * 1000); // refresh every 10 min
+    return () => clearInterval(id);
+  }, []);
+
+  return weather;
 }
 
 // ── Primitives ────────────────────────────────────────────────────────────────
@@ -277,7 +332,7 @@ function WeatherGlyph({ kind, size = 56 }) {
 }
 
 function WeatherBlock() {
-  const { temp, condition, conditionDe, hi, lo } = WEATHER;
+  const { temp, condition, conditionDe, hi, lo } = useWeather();
   return (
     <div style={{
       gridArea: "weather",
@@ -314,31 +369,86 @@ function WeatherBlock() {
 
 // ── LoadHero ──────────────────────────────────────────────────────────────────
 
-function TrafficLight({ active }) {
-  const lights = [
-    { key: "rot",   color: LOAD_LEVELS.rot.color  },
-    { key: "gelb",  color: LOAD_LEVELS.gelb.color },
-    { key: "gruen", color: LOAD_LEVELS.gruen.color},
-  ];
+function Thermometer({ load }) {
+  const level = LOAD_LEVELS[load];
+  const color = level.color;
+
+  // Mercury fill level per status (0 = empty bottom, 1 = full top)
+  const fillRatio = { gruen: 0.22, gelb: 0.58, rot: 0.92 }[load];
+
+  // SVG geometry constants (viewBox "0 0 80 290")
+  const cx         = 40;
+  const tubeTopY   = 16;
+  const tubeBottomY= 224;   // where tube meets bulb
+  const tubeH      = tubeBottomY - tubeTopY;  // 208
+  const tubeInnerW = 16;
+  const tubeInnerX = cx - tubeInnerW / 2;     // 32
+  const bulbCY     = 256;
+  const bulbOuterR = 27;
+  const bulbInnerR = 20;
+  const mercuryTopY = tubeBottomY - fillRatio * tubeH;
+
   return (
     <div style={{
-      display: "flex", flexDirection: "column", gap: 14, padding: 18,
+      padding: "20px 22px",
       background: "#1c1a16", borderRadius: 18,
-      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 20px 40px -20px rgba(0,0,0,0.35)"
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 20px 40px -20px rgba(0,0,0,0.35)",
+      display: "flex", alignItems: "center", justifyContent: "center"
     }}>
-      {lights.map(l => {
-        const on = l.key === active;
-        return (
-          <div key={l.key} style={{
-            width: 78, height: 78, borderRadius: "50%",
-            background: on ? l.color : "rgba(255,255,255,0.05)",
-            boxShadow: on
-              ? `0 0 0 2px rgba(255,255,255,0.1) inset, 0 0 40px 6px ${l.color}, 0 0 80px 14px ${l.color}40`
-              : "inset 0 2px 6px rgba(0,0,0,0.7)",
-            transition: "all 0.6s ease"
+      <svg width="80" height="290" viewBox="0 0 80 290" style={{ overflow: "visible" }}>
+        <defs>
+          {/* Clip the mercury column to the inner tube shape */}
+          <clipPath id="thermo-tube-clip">
+            <rect x={tubeInnerX} y={tubeTopY} width={tubeInnerW} height={tubeH} rx={tubeInnerW / 2} />
+          </clipPath>
+        </defs>
+
+        {/* Ambient glow radiating from bulb */}
+        <circle cx={cx} cy={bulbCY} r={50}
+          style={{ fill: color, opacity: 0.2, filter: "blur(14px)", transition: "fill 0.6s ease" }} />
+
+        {/* Glass tube */}
+        <rect x={cx - 15} y={10} width={30} height={218} rx={15}
+          fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)" strokeWidth={1} />
+
+        {/* Glass bulb */}
+        <circle cx={cx} cy={bulbCY} r={bulbOuterR}
+          fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)" strokeWidth={1} />
+
+        {/* Mercury — bulb (always full) */}
+        <circle cx={cx} cy={bulbCY} r={bulbInnerR}
+          style={{
+            fill: color,
+            filter: `drop-shadow(0 0 8px ${color})`,
+            transition: "fill 0.6s ease"
           }} />
-        );
-      })}
+
+        {/* Mercury — column (rises/falls with status) */}
+        <g clipPath="url(#thermo-tube-clip)">
+          <rect style={{
+            x: tubeInnerX,
+            y: mercuryTopY,
+            width: tubeInnerW,
+            height: tubeBottomY - mercuryTopY,
+            fill: color,
+            transition: "y 0.9s cubic-bezier(0.4,0,0.2,1), height 0.9s cubic-bezier(0.4,0,0.2,1), fill 0.6s ease"
+          }} />
+        </g>
+
+        {/* Graduation ticks at 25 / 50 / 75 % */}
+        {[0.25, 0.5, 0.75].map(t => {
+          const y = tubeBottomY - t * tubeH;
+          return (
+            <line key={t}
+              x1={cx + 9} y1={y} x2={cx + 17} y2={y}
+              stroke="rgba(255,255,255,0.22)" strokeWidth={1} strokeLinecap="round" />
+          );
+        })}
+
+        {/* Tube shine highlight */}
+        <rect x={tubeInnerX + 2} y={14} width={5} height={210} rx={2.5}
+          fill="rgba(255,255,255,0.07)" />
+      </svg>
     </div>
   );
 }
@@ -362,7 +472,7 @@ function LoadHero({ load }) {
         background: `radial-gradient(circle, ${level.color}22 0%, transparent 70%)`,
         pointerEvents: "none"
       }} />
-      <TrafficLight active={load} />
+      <Thermometer load={load} />
       <div style={{ flex: 1, position: "relative" }}>
         <SectionLabel style={{ color: level.color, opacity: 0.8 }}>
           Aktuelle Auslastung Sauna
