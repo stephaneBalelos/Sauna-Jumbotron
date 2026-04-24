@@ -45,7 +45,8 @@
 // Edit these values to update the display without touching anything else.
 
 const CONFIG = {
-  load:             "gruen",   // "gruen" | "gelb" | "rot"
+  load:             "gruen",   // fallback when loadApiUrl is unset or unavailable: "gruen" | "gelb" | "rot"
+  loadApiUrl:       "https://n8n2.stephanedondyas.cloud/webhook/7a626ab6-5ee0-4320-b530-81fa012c7d5e",        // URL returning { status: "gruen"|"gelb"|"rot", label, head, body }
   accentHex:        "#D87A7A", // accent colour (pinkish-red by default)
   slideshowSeconds: 7,         // seconds per news slide
   // 53.03308452669527, 8.55818828907121, Saunahuus Ganderkesee
@@ -202,6 +203,41 @@ function useNews() {
   }, []);
 
   return news;
+}
+
+function useLoadLevel() {
+  const [level, setLevel] = React.useState(() => {
+    const base = LOAD_LEVELS[CONFIG.load] || LOAD_LEVELS.gruen;
+    return { status: CONFIG.load, ...base };
+  });
+
+  React.useEffect(() => {
+    if (!CONFIG.loadApiUrl) return;
+
+    async function fetchLoad() {
+      try {
+        const res = await fetch(CONFIG.loadApiUrl);
+        if (!res.ok) throw new Error("fetch failed");
+        const data = await res.json();
+        const { status, items } = data;
+        const s = status === 'status-rot' ? 'rot' : status === 'status-gelb' ? 'gelb' : 'gruen';
+        const currentStatus = items && items.length > 0 ? items[0] : {};
+        const label = currentStatus.label || LOAD_LEVELS[s]?.label || "Unbekannt";
+        const head  = currentStatus.head  || LOAD_LEVELS[s]?.head  || "";
+        const body  = currentStatus.body  || LOAD_LEVELS[s]?.body  || "";
+        const colors = LOAD_LEVELS[s] || LOAD_LEVELS.gruen;
+        setLevel({ status: s, label, head, body, color: colors.color, soft: colors.soft, ring: colors.ring });
+      } catch {
+        // keep whatever was last shown
+      }
+    }
+
+    fetchLoad();
+    const id = setInterval(fetchLoad, 2 * 60 * 1000); // refresh every 2 min
+    return () => clearInterval(id);
+  }, []);
+
+  return level;
 }
 
 // ── Primitives ────────────────────────────────────────────────────────────────
@@ -385,12 +421,9 @@ function WeatherBlock() {
 
 // ── LoadHero ──────────────────────────────────────────────────────────────────
 
-function Thermometer({ load }) {
-  const level = LOAD_LEVELS[load];
-  const color = level.color;
-
+function Thermometer({ status, color }) {
   // Mercury fill level per status (0 = empty bottom, 1 = full top)
-  const fillRatio = { gruen: 0.22, gelb: 0.58, rot: 0.92 }[load];
+  const fillRatio = { gruen: 0.22, gelb: 0.58, rot: 0.92 }[status] ?? 0.22;
 
   // SVG geometry constants (viewBox "0 0 80 290")
   const cx         = 40;
@@ -469,8 +502,7 @@ function Thermometer({ load }) {
   );
 }
 
-function LoadHero({ load }) {
-  const level = LOAD_LEVELS[load];
+function LoadHero({ level }) {
   return (
     <div style={{
       gridArea: "load",
@@ -488,7 +520,7 @@ function LoadHero({ load }) {
         background: `radial-gradient(circle, ${level.color}22 0%, transparent 70%)`,
         pointerEvents: "none"
       }} />
-      <Thermometer load={load} />
+      <Thermometer status={level.status} color={level.color} />
       <div style={{ flex: 1, position: "relative" }}>
         <SectionLabel style={{ color: level.color, opacity: 0.8 }}>
           Aktuelle Auslastung Sauna
@@ -788,6 +820,7 @@ function StaffMessageBlock() {
 function App() {
   const scale = useStageScale();
   const news  = useNews();
+  const level = useLoadLevel();
   const hasNews = news !== null && news.length > 0;
 
   return (
@@ -817,7 +850,7 @@ function App() {
             gap: 22,
             height: 640
           }}>
-            <LoadHero load={CONFIG.load} />
+            <LoadHero level={level} />
             <div style={{
               gridArea: "meta",
               display: "grid",
