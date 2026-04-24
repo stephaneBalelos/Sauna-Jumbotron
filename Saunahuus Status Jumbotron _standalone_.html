@@ -53,6 +53,7 @@ const CONFIG = {
   weatherLat:       53.0330845,
   weatherLon:       8.5581883,
   newsApiUrl:       "https://n8n2.stephanedondyas.cloud/webhook/8fe2c340-13ee-485d-8c66-710c2ef83178",        // URL returning [{lastPublished, title, body, kicker?, caption?, image?}]
+  openingTimesApiUrl: "https://n8n2.stephanedondyas.cloud/webhook/0750df34-82c9-4cad-b72b-f9f630b68ab8",                             // URL returning [{zeitraum, details, "tage-der-woche"}]
 };
 
 // ── Data ─────────────────────────────────────────────────────────────────────
@@ -238,6 +239,58 @@ function useLoadLevel() {
   }, []);
 
   return level;
+}
+
+function useOpeningTimes() {
+  const [opening, setOpening] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!CONFIG.openingTimesApiUrl) return;
+
+    async function fetchOpening() {
+      try {
+        const res = await fetch(CONFIG.openingTimesApiUrl);
+        if (!res.ok) throw new Error("fetch failed");
+        const data = await res.json();
+        console.log("Fetched opening times data:", data);
+        const items = Array.isArray(data) ? data : (data.data || []);
+
+        // JS getDay(): 0=Sun,1=Mon…6=Sat → ISO weekday: Mon=1…Sun=7
+        const jsDay = new Date().getDay();
+        const isoDay = jsDay === 0 ? 7 : jsDay;
+
+        const match = items.find(item => {
+          const days = String(item["tage-der-woche"] || "")
+            .split(",")
+            .map(d => parseInt(d.trim(), 10))
+            .filter(d => !isNaN(d));
+          return days.includes(isoDay);
+        });
+
+        if (!match) { setOpening({ closed: true }); return; }
+
+        // Parse "HH:MM - HH:MM Uhr" → { openH, openM, closeH, closeM }
+        const m = String(match.zeitraum || "").match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
+        setOpening({
+          closed:   false,
+          zeitraum: match.zeitraum,
+          details:  match.details || "",
+          openH:    m ? parseInt(m[1], 10) : null,
+          openM:    m ? parseInt(m[2], 10) : 0,
+          closeH:   m ? parseInt(m[3], 10) : 22,
+          closeM:   m ? parseInt(m[4], 10) : 0,
+        });
+      } catch {
+        setOpening(null);
+      }
+    }
+
+    fetchOpening();
+    const id = setInterval(fetchOpening, 30 * 60 * 1000); // refresh every 30 min
+    return () => clearInterval(id);
+  }, []);
+
+  return opening;
 }
 
 // ── Primitives ────────────────────────────────────────────────────────────────
@@ -729,13 +782,29 @@ function AufgussBlock() {
 
 // ── ClosingBlock ──────────────────────────────────────────────────────────────
 
-function ClosingBlock() {
+function ClosingBlock({ opening }) {
   const now = useClock();
-  const close = new Date(now); close.setHours(22, 0, 0, 0);
+
+  const closeH = opening && !opening.closed && opening.closeH != null ? opening.closeH : 22;
+  const closeM = opening && !opening.closed && opening.closeM != null ? opening.closeM : 0;
+  const close = new Date(now); close.setHours(closeH, closeM, 0, 0);
   let remaining = close - now;
   if (remaining < 0) remaining += 24 * 3600 * 1000;
-  const h = Math.floor(remaining / 3600000);
-  const m = Math.floor(remaining % 3600000 / 60000);
+  const remH = Math.floor(remaining / 3600000);
+  const remM = Math.floor(remaining % 3600000 / 60000);
+
+  const isClosed = opening && opening.closed;
+
+  // Format display time as "HH:MM — HH:MM" from parsed hours, or fall back to raw zeitraum
+  let zeitraumDisplay = "- -";
+  if (opening && !opening.closed) {
+    if (opening.openH != null) {
+      const fmt = (h, m) => `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+      zeitraumDisplay = `${fmt(opening.openH, opening.openM)} — ${fmt(opening.closeH, opening.closeM)}`;
+    } else if (opening.zeitraum) {
+      zeitraumDisplay = opening.zeitraum;
+    }
+  }
 
   return (
     <div style={{
@@ -749,29 +818,44 @@ function ClosingBlock() {
       <div>
         <div style={{
           fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
-          fontSize: 56, lineHeight: 1, color: ACCENT, fontVariantNumeric: "tabular-nums"
+          fontSize: isClosed ? 40 : 56, lineHeight: 1, color: ACCENT, fontVariantNumeric: "tabular-nums"
         }}>
-          09:00 — 22:00
+          {isClosed ? "Heute geschlossen" : zeitraumDisplay}
         </div>
-        <div style={{
-          marginTop: 14,
-          fontFamily: "'Inter', sans-serif", fontSize: 15, lineHeight: 1.5,
-          color: "rgba(40,35,28,0.72)"
-        }}>
-          Letzter Einlass um 21:00 · Saunagänge bis 21:30.
-        </div>
+        {!isClosed && opening && opening.details && (
+          <div style={{
+            marginTop: 14,
+            fontFamily: "'Inter', sans-serif", fontSize: 15, lineHeight: 1.5,
+            color: "rgba(40,35,28,0.72)"
+          }}>
+            {opening.details}
+          </div>
+        )}
+        {!opening && (
+          <div style={{
+            marginTop: 14,
+            fontFamily: "'Inter', sans-serif", fontSize: 15, lineHeight: 1.5,
+            color: "rgba(40,35,28,0.72)"
+          }}>
+            Letzter Einlass um 21:00 · Saunagänge bis 21:30.
+          </div>
+        )}
       </div>
-      <div style={{
-        paddingTop: 14, borderTop: "1px solid rgba(40,35,28,0.12)",
-        display: "flex", alignItems: "baseline", justifyContent: "space-between",
-        fontFamily: "'Inter', sans-serif", fontSize: 13,
-        letterSpacing: "0.08em", color: "rgba(40,35,28,0.6)"
-      }}>
-        <span>Noch geöffnet</span>
-        <span style={{
-          fontFamily: "'ClashDisplay-Variable', sans-serif", fontSize: 24, fontWeight: 300,
-          color: "#2b2720", fontVariantNumeric: "tabular-nums"
-        }}>{h} Std {String(m).padStart(2, "0")} Min</span>
+      <div>
+        {!isClosed && (
+        <div style={{
+          paddingTop: 14, borderTop: "1px solid rgba(40,35,28,0.12)",
+          display: "flex", alignItems: "baseline", justifyContent: "space-between",
+          fontFamily: "'Inter', sans-serif", fontSize: 13,
+          letterSpacing: "0.08em", color: "rgba(40,35,28,0.6)"
+        }}>
+          <span>Noch geöffnet</span>
+          <span style={{
+            fontFamily: "'ClashDisplay-Variable', sans-serif", fontSize: 24, fontWeight: 300,
+            color: "#2b2720", fontVariantNumeric: "tabular-nums"
+          }}>{remH} Std {String(remM).padStart(2, "0")} Min</span>
+        </div>
+      )}
       </div>
     </div>
   );
@@ -818,9 +902,10 @@ function StaffMessageBlock() {
 // ── App ───────────────────────────────────────────────────────────────────────
 
 function App() {
-  const scale = useStageScale();
-  const news  = useNews();
-  const level = useLoadLevel();
+  const scale   = useStageScale();
+  const news    = useNews();
+  const level   = useLoadLevel();
+  const opening = useOpeningTimes();
   const hasNews = news !== null && news.length > 0;
 
   return (
@@ -876,7 +961,7 @@ function App() {
             height: 300
           }}>
             <AufgussBlock />
-            <ClosingBlock />
+            <ClosingBlock opening={opening} />
             <StaffMessageBlock />
           </div>
         </div>
