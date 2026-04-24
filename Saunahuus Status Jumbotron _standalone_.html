@@ -23,6 +23,14 @@
       0%, 100% { opacity: 1; box-shadow: 0 0 0 4px rgba(79,178,107,0.18); }
       50%       { opacity: 0.7; box-shadow: 0 0 0 8px rgba(79,178,107,0.05); }
     }
+    @keyframes slideInFromRight {
+      from { opacity: 0; transform: translateX(48px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideInFromLeft {
+      from { opacity: 0; transform: translateX(-48px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
   </style>
 </head>
 <body>
@@ -41,35 +49,12 @@ const CONFIG = {
   accentHex:        "#D87A7A", // accent colour (pinkish-red by default)
   slideshowSeconds: 7,         // seconds per news slide
   // 53.03308452669527, 8.55818828907121, Saunahuus Ganderkesee
-  weatherLat:       53.0330845, 
+  weatherLat:       53.0330845,
   weatherLon:       8.5581883,
+  newsApiUrl:       "https://n8n2.stephanedondyas.cloud/webhook/8fe2c340-13ee-485d-8c66-710c2ef83178",        // URL returning [{lastPublished, title, body, kicker?, caption?, image?}]
 };
 
 // ── Data ─────────────────────────────────────────────────────────────────────
-
-const NEWS = [
-  {
-    kicker:  "Aktuelles",
-    title:   "Neue Entgeltordnung ab dem 01.01.2026",
-    body:    "Ab dem neuen Jahr gelten angepasste Tarife für Einzeleintritte und Abonnements. Die Details finden Sie an der Rezeption.",
-    caption: "Saunalandschaft · Ruheraum",
-    tone:    "warm",
-  },
-  {
-    kicker:  "Freibad",
-    title:   "Unser Freibad öffnet wieder!",
-    body:    "Ab dem 15. Mai dürfen Sie sich wieder auf erfrischende Bahnen im beheizten Außenbecken freuen. Öffnung täglich ab 9:00 Uhr.",
-    caption: "Freibad · Außenbecken",
-    tone:    "cool",
-  },
-  {
-    kicker:  "Hinweis",
-    title:   "Schließung der Kosmetikabteilung zum 01.01.2026",
-    body:    "Aus personellen Gründen entfällt unser Kosmetikangebot vorerst. Massagen und Bäder stehen wie gewohnt zur Verfügung.",
-    caption: "Kosmetik · Behandlungsraum",
-    tone:    "wood",
-  },
-];
 
 const AUFGUSS = [
   { time: "14:00", name: "Birke & Honig",    room: "Finnische Sauna", status: "past"     },
@@ -186,6 +171,37 @@ function useWeather() {
   }, []);
 
   return weather;
+}
+
+function useNews() {
+  const [news, setNews] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!CONFIG.newsApiUrl) return;
+
+    async function fetchNews() {
+      try {
+        const res = await fetch(CONFIG.newsApiUrl);
+        if (!res.ok) throw new Error("fetch failed");
+        const data = await res.json();
+        console.log("Fetched news data:", data);
+        const items = data[0].data ? data[0].data : [];
+        if (items.length === 0) { setNews(null); return; }
+        const sorted = [...items]
+          .sort((a, b) => new Date(b.lastPublished) - new Date(a.lastPublished))
+          .slice(0, 5);
+        setNews(sorted);
+      } catch {
+        setNews(null);
+      }
+    }
+
+    fetchNews();
+    const id = setInterval(fetchNews, 5 * 60 * 1000); // refresh every 5 min
+    return () => clearInterval(id);
+  }, []);
+
+  return news;
 }
 
 // ── Primitives ────────────────────────────────────────────────────────────────
@@ -506,11 +522,16 @@ function LoadHero({ load }) {
 
 // ── NewsSlideshow ─────────────────────────────────────────────────────────────
 
-function NewsSlideshow({ seconds }) {
-  const [idx, setIdx]   = React.useState(0);
-  const [prog, setProg] = React.useState(0);
+function NewsSlideshow({ news, seconds }) {
+  const [idx, setIdx]       = React.useState(0);
+  const [prog, setProg]     = React.useState(0);
+  const [dir, setDir]       = React.useState(1); // 1 = forward (right→left), -1 = backward
+
+  // Reset to first slide whenever the news data changes.
+  React.useEffect(() => { setIdx(0); setProg(0); setDir(1); }, [news]);
 
   React.useEffect(() => {
+    if (!news || news.length === 0) return;
     setProg(0);
     const start = performance.now();
     let raf;
@@ -518,13 +539,18 @@ function NewsSlideshow({ seconds }) {
       const p = Math.min(1, (t - start) / (seconds * 1000));
       setProg(p);
       if (p < 1) raf = requestAnimationFrame(tick);
-      else       setIdx(i => (i + 1) % NEWS.length);
+      else { setDir(1); setIdx(i => (i + 1) % news.length); }
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [idx, seconds]);
+  }, [idx, seconds, news]);
 
-  const item = NEWS[idx];
+  if (!news || news.length === 0) return null;
+
+  const safeIdx = idx % news.length;
+  const item = news[safeIdx];
+  const slideAnim = dir >= 0 ? "slideInFromRight 0.5s cubic-bezier(0.22,1,0.36,1) both"
+                              : "slideInFromLeft  0.5s cubic-bezier(0.22,1,0.36,1) both";
 
   return (
     <div style={{
@@ -543,13 +569,13 @@ function NewsSlideshow({ seconds }) {
       }}>
         <SectionLabel>Was gibt's Neues?</SectionLabel>
         <div style={{ display: "flex", gap: 6 }}>
-          {NEWS.map((_, i) => (
+          {news.map((_, i) => (
             <div key={i} style={{
               width: 28, height: 3, borderRadius: 2,
-              background: i === idx ? "rgba(40,35,28,0.15)" : "rgba(40,35,28,0.07)",
+              background: i === safeIdx ? "rgba(40,35,28,0.15)" : "rgba(40,35,28,0.07)",
               overflow: "hidden", position: "relative"
             }}>
-              {i === idx && (
+              {i === safeIdx && (
                 <div style={{
                   position: "absolute", inset: 0,
                   width: `${prog * 100}%`, background: ACCENT, borderRadius: 2
@@ -561,20 +587,25 @@ function NewsSlideshow({ seconds }) {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1.15fr 1fr", minHeight: 0 }}>
+      <div key={safeIdx} style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: 0, animation: slideAnim }}>
         <div style={{ padding: 24 }}>
-          <PlaceholderPhoto label={item.caption} tone={item.tone} style={{ width: "100%", height: "100%" }} />
+          {item.image
+            ? <img src={item.image} alt={item.caption || ""} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 2 }} />
+            : <PlaceholderPhoto label={item.caption || ""} tone="warm" style={{ width: "100%", height: "100%" }} />
+          }
         </div>
         <div style={{
           display: "flex", flexDirection: "column", justifyContent: "center",
           padding: "24px 40px 24px 8px"
         }}>
+          {item.kicker && (
+            <div style={{
+              fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 500,
+              letterSpacing: "0.24em", textTransform: "uppercase", color: ACCENT
+            }}>{item.kicker}</div>
+          )}
           <div style={{
-            fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 500,
-            letterSpacing: "0.24em", textTransform: "uppercase", color: ACCENT
-          }}>{item.kicker}</div>
-          <div style={{
-            marginTop: 18,
+            marginTop: item.kicker ? 18 : 0,
             fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
             fontSize: 48, lineHeight: 1.1, color: ACCENT, letterSpacing: "-0.005em"
           }}>{item.title}</div>
@@ -590,7 +621,7 @@ function NewsSlideshow({ seconds }) {
             color: "rgba(40,35,28,0.45)"
           }}>
             <span style={{ fontVariantNumeric: "tabular-nums" }}>
-              {String(idx + 1).padStart(2, "0")} / {String(NEWS.length).padStart(2, "0")}
+              {String(safeIdx + 1).padStart(2, "0")} / {String(news.length).padStart(2, "0")}
             </span>
             <span style={{ flex: 1, height: 1, background: "rgba(40,35,28,0.12)" }} />
             <span>Mehr an der Rezeption</span>
@@ -756,6 +787,8 @@ function StaffMessageBlock() {
 
 function App() {
   const scale = useStageScale();
+  const news  = useNews();
+  const hasNews = news !== null && news.length > 0;
 
   return (
     <div style={{
@@ -776,12 +809,11 @@ function App() {
           <div style={{
             padding: "28px 64px 0",
             display: "grid",
-            gridTemplateColumns: "1.15fr 1fr",
+            gridTemplateColumns: hasNews ? "1.15fr 1fr" : "1fr",
             gridTemplateRows: "auto 1fr",
-            gridTemplateAreas: `
-              "load news"
-              "meta news"
-            `,
+            gridTemplateAreas: hasNews
+              ? `"load news" "meta news"`
+              : `"load" "meta"`,
             gap: 22,
             height: 640
           }}>
@@ -798,7 +830,7 @@ function App() {
               <ClockBlock />
               <WeatherBlock />
             </div>
-            <NewsSlideshow seconds={CONFIG.slideshowSeconds} />
+            {hasNews && <NewsSlideshow news={news} seconds={CONFIG.slideshowSeconds} />}
           </div>
 
           {/* Bottom rail */}
