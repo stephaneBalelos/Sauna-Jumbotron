@@ -54,7 +54,8 @@ const CONFIG = {
   accentHex:        "#D87A7A", // accent colour (pinkish-red by default)
   logoUrl:          "https://cdn.prod.website-files.com/66b1df72c5f8c23c973ec3e2/66c721715f80b6d218e15734_logo-saunahuus.png.webp",        // URL of the logo image shown in the top bar; leave empty to show text fallback
   slideshowSeconds: 7,         // seconds per news slide
-  showAufgussplan: false,       // set to false to hide the Aufgussplan column
+  showAufgussplan: true,       // set to false to hide the Aufgussplan column
+  showNews:        false,       // set to false to hide the news slideshow column
   // 53.03308452669527, 8.55818828907121, Saunahuus Ganderkesee
   weatherLat:       53.0330845,
   weatherLon:       8.5581883,
@@ -1084,7 +1085,8 @@ function App() {
   const level          = useLoadLevel(refreshKey);
   const opening        = useOpeningTimes(refreshKey);
   const staffMessages  = useStaffMessages(refreshKey);
-  const hasNews  = news !== null && news.length > 0;
+  const hasNews        = news !== null && news.length > 0;
+  const showNewsColumn = CONFIG.showNews && hasNews;
   const hasStaff = staffMessages !== null && staffMessages.length > 0;
 
   return (
@@ -1108,9 +1110,9 @@ function App() {
           <div style={{
             padding: "28px 48px 0",
             display: "grid",
-            gridTemplateColumns: hasNews ? "1.1fr 1fr" : "1fr",
+            gridTemplateColumns: showNewsColumn ? "1.1fr 1fr" : "1fr",
             gridTemplateRows: "auto 1fr",
-            gridTemplateAreas: hasNews
+            gridTemplateAreas: showNewsColumn
               ? `"load news" "meta news"`
               : `"load" "meta"`,
             gap: 22,
@@ -1129,7 +1131,7 @@ function App() {
               <ClockBlock />
               <WeatherBlock refreshKey={refreshKey} />
             </div>
-            {hasNews && <NewsSlideshow news={news} seconds={CONFIG.slideshowSeconds} />}
+            {showNewsColumn && <NewsSlideshow news={news} seconds={CONFIG.slideshowSeconds} />}
           </div>
 
           {/* Bottom rail */}

@@ -1,0 +1,24 @@
+<svg width="80" height="290" viewBox="0 0 80 290" overflow="visible">
+  <defs>
+    <clipPath id="thermo-tube-clip">
+      <rect x="32" y="16" width="16" height="208" rx="8"/>
+    </clipPath>
+    <filter id="blur-glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+    <filter id="drop-shadow-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="oklch(0.62 0.14 148)"/>
+    </filter>
+  </defs>
+  <circle cx="40" cy="256" r="50" fill="oklch(0.62 0.14 148)" opacity="0.2" filter="url(#blur-glow)"/>
+  <rect x="25" y="10" width="30" height="218" rx="15" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+  <circle cx="40" cy="256" r="27" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+  <circle cx="40" cy="256" r="20" fill="oklch(0.62 0.14 148)" filter="url(#drop-shadow-glow)"/>
+  <g clip-path="url(#thermo-tube-clip)">
+    <rect x="32" y="178.24" width="16" height="45.76" fill="oklch(0.62 0.14 148)"/>
+  </g>
+  <line x1="49" y1="172" x2="57" y2="172" stroke="rgba(255,255,255,0.22)" stroke-width="1" stroke-linecap="round"/>
+  <line x1="49" y1="120" x2="57" y2="120" stroke="rgba(255,255,255,0.22)" stroke-width="1" stroke-linecap="round"/>
+  <line x1="49" y1="68" x2="57" y2="68" stroke="rgba(255,255,255,0.22)" stroke-width="1" stroke-linecap="round"/>
+  <rect x="34" y="14" width="5" height="210" rx="2.5" fill="rgba(255,255,255,0.07)"/>
+</svg>
