@@ -50,17 +50,17 @@
 
 const CONFIG = {
   load:             "gruen",   // fallback when loadApiUrl is unset or unavailable: "gruen" | "gelb" | "rot"
-  loadApiUrl:       "https://n8n2.stephanedondyas.cloud/webhook/7a626ab6-5ee0-4320-b530-81fa012c7d5e",        // URL returning { status: "gruen"|"gelb"|"rot", label, head, body }
+  loadApiUrl:       "https://n8n2.stephanedondyas.cloud/webhook/0fba5f17-df93-4083-a1ec-2c355a68156c",        // URL returning { status: "gruen"|"gelb"|"rot", label, head, body }
   accentHex:        "#D87A7A", // accent colour (pinkish-red by default)
   logoUrl:          "https://cdn.prod.website-files.com/66b1df72c5f8c23c973ec3e2/66c721715f80b6d218e15734_logo-saunahuus.png.webp",        // URL of the logo image shown in the top bar; leave empty to show text fallback
   slideshowSeconds: 7,         // seconds per news slide
-  showAufgussplan: true,       // set to false to hide the Aufgussplan column
+  showAufgussplan: false,       // set to false to hide the Aufgussplan column
   showNews:        false,       // set to false to hide the news slideshow column
   // 53.03308452669527, 8.55818828907121, Saunahuus Ganderkesee
   weatherLat:       53.0330845,
   weatherLon:       8.5581883,
   newsApiUrl:       "https://n8n2.stephanedondyas.cloud/webhook/8fe2c340-13ee-485d-8c66-710c2ef83178",        // URL returning [{lastPublished, title, body, kicker?, caption?, image?}]
-  openingTimesApiUrl:  "https://n8n2.stephanedondyas.cloud/webhook/0750df34-82c9-4cad-b72b-f9f630b68ab8",                             // URL returning [{zeitraum, details, "tage-der-woche"}]
+  openingTimesApiUrl:  "https://n8n2.stephanedondyas.cloud/webhook/4bf2357a-32e5-4c17-82dc-702763324ee3",                             // URL returning [{zeitraum, details, "tage-der-woche"}]
   staffMessagesApiUrl: "https://n8n2.stephanedondyas.cloud/webhook/b5c6baa1-4d50-49ec-bb78-7efa37f07f4e",                                                                                                            // URL returning [{label, message, signature}]; leave empty to use STAFF_MESSAGES fallback
 };
 
