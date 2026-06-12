@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     @font-face {
-      font-family: 'ClashDisplay-Variable';
+      font-family: 'Clash Display Variable';
       src: url('fonts/ClashDisplay-Variable.woff2') format('woff2'),
            url('fonts/ClashDisplay-Variable.woff') format('woff');
       font-weight: 200 700;
@@ -404,7 +404,7 @@ function TopBar({ onRefresh }) {
         {CONFIG.logoUrl
           ? <img src={CONFIG.logoUrl} alt="Logo" style={{ height: 40, width: "auto", display: "block" }} />
           : <div style={{
-              fontFamily: "'ClashDisplay-Variable', sans-serif",
+              fontFamily: "'Clash Display Variable', sans-serif",
               fontWeight: 300, fontSize: 30, letterSpacing: "0.34em", color: "#2b2720"
             }}>SAUNAHUUS</div>
         }
@@ -467,7 +467,7 @@ function ClockBlock() {
       <SectionLabel>Uhrzeit</SectionLabel>
       <div>
         <div style={{
-          fontFamily: "'ClashDisplay-Variable', sans-serif",
+          fontFamily: "'Clash Display Variable', sans-serif",
           fontWeight: 300, fontSize: 96, lineHeight: 0.95, letterSpacing: "-0.01em",
           color: "#2b2720", fontVariantNumeric: "tabular-nums",
           display: "flex", alignItems: "baseline", gap: 2
@@ -535,12 +535,12 @@ function WeatherBlock({ refreshKey }) {
         <WeatherGlyph kind={condition} size={88} />
         <div style={{ display: "flex", alignItems: "baseline" }}>
           <span style={{
-            fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
+            fontFamily: "'Clash Display Variable', sans-serif", fontWeight: 300,
             fontSize: 96, lineHeight: 0.95, letterSpacing: "-0.02em",
             color: "#2b2720", fontVariantNumeric: "tabular-nums"
           }}>{temp}</span>
           <span style={{
-            fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
+            fontFamily: "'Clash Display Variable', sans-serif", fontWeight: 300,
             fontSize: 48, color: ACCENT, marginLeft: 4
           }}>°C</span>
         </div>
@@ -666,7 +666,7 @@ function LoadHero({ level }) {
         </SectionLabel>
         <div style={{
           marginTop: 12,
-          fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
+          fontFamily: "'Clash Display Variable', sans-serif", fontWeight: 300,
           fontSize: 104, lineHeight: 1, letterSpacing: "-0.015em",
           color: level.color
         }}>
@@ -674,7 +674,7 @@ function LoadHero({ level }) {
         </div>
         <div style={{
           marginTop: 20,
-          fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
+          fontFamily: "'Clash Display Variable', sans-serif", fontWeight: 300,
           fontSize: 32, lineHeight: 1.25, color: "#2b2720", maxWidth: 640
         }}>
           {level.head}
@@ -777,7 +777,7 @@ function NewsSlideshow({ news, seconds }) {
           )}
           <div style={{
             marginTop: item.kicker ? 18 : 0,
-            fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
+            fontFamily: "'Clash Display Variable', sans-serif", fontWeight: 300,
             fontSize: 48, lineHeight: 1.1, color: ACCENT, letterSpacing: "-0.005em"
           }}>{item.title}</div>
           <div style={{
@@ -878,7 +878,7 @@ function AufgussBlock() {
               opacity: past ? 0.38 : 1
             }}>
               <div style={{
-                fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
+                fontFamily: "'Clash Display Variable', sans-serif", fontWeight: 300,
                 fontSize: 26, color: timeColor,
                 fontVariantNumeric: "tabular-nums",
                 textDecoration: past ? "line-through" : "none"
@@ -952,7 +952,7 @@ function ClosingBlock({ opening }) {
       <SectionLabel>Öffnungszeiten heute</SectionLabel>
       <div>
         <div style={{
-          fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
+          fontFamily: "'Clash Display Variable', sans-serif", fontWeight: 300,
           fontSize: isClosed ? 40 : 56, lineHeight: 1, color: ACCENT, fontVariantNumeric: "tabular-nums"
         }}>
           {isClosed ? "Heute geschlossen" : zeitraumDisplay}
@@ -986,7 +986,7 @@ function ClosingBlock({ opening }) {
         }}>
           <span>Noch geöffnet</span>
           <span style={{
-            fontFamily: "'ClashDisplay-Variable', sans-serif", fontSize: 24, fontWeight: 300,
+            fontFamily: "'Clash Display Variable', sans-serif", fontSize: 24, fontWeight: 300,
             color: "#2b2720", fontVariantNumeric: "tabular-nums"
           }}>{remH} Std {String(remM).padStart(2, "0")} Min</span>
         </div>
@@ -1055,7 +1055,7 @@ function StaffMessageBlock({ messages }) {
           letterSpacing: "0.26em", textTransform: "uppercase", color: ACCENT
         }}>{item.label}</div>
         <div style={{
-          fontFamily: "'ClashDisplay-Variable', sans-serif", fontWeight: 300,
+          fontFamily: "'Clash Display Variable', sans-serif", fontWeight: 300,
           fontSize: 28, lineHeight: 1.3, letterSpacing: "0.005em",
           textWrap: "pretty"
         }}>
