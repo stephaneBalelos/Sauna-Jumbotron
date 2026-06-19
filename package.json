@@ -4,7 +4,8 @@
   "private": true,
   "description": "Saunahuus status jumbotron — standalone HTML TV displays (sauna + baeder).",
   "scripts": {
-    "build": "node build/build.js"
+    "build": "node build/build.js",
+    "build:s": "node build/build.js --split"
   },
   "type": "commonjs",
   "license": "ISC",
