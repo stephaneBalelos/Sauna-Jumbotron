@@ -12,8 +12,6 @@ const CONFIG = {
   // URL of the logo image shown in the top bar; leave empty to show text fallback
   slideshowSeconds: 7,
   // seconds per news slide
-  showAufgussplan: false,
-  // set to false to hide the Aufgussplan column
   showNews: false,
   // set to false to hide the news slideshow column
   // 53.03308452669527, 8.55818828907121, Saunahuus Ganderkesee
@@ -21,38 +19,15 @@ const CONFIG = {
   weatherLon: 8.5581883,
   newsApiUrl: "https://n8n2.stephanedondyas.cloud/webhook/8fe2c340-13ee-485d-8c66-710c2ef83178",
   // URL returning [{lastPublished, title, body, kicker?, caption?, image?}]
-  openingTimesApiUrl: "https://n8n2.stephanedondyas.cloud/webhook/4bf2357a-32e5-4c17-82dc-702763324ee3",
+  openingTimesApiUrlSauna: "https://n8n2.stephanedondyas.cloud/webhook/0750df34-82c9-4cad-b72b-f9f630b68ab8",
+  // URL returning [{zeitraum, details, "tage-der-woche"}]
+  openingTimesApiUrlFreibad: "https://n8n2.stephanedondyas.cloud/webhook/4bf2357a-32e5-4c17-82dc-702763324ee3",
   // URL returning [{zeitraum, details, "tage-der-woche"}]
   staffMessagesApiUrl: "https://n8n2.stephanedondyas.cloud/webhook/b5c6baa1-4d50-49ec-bb78-7efa37f07f4e" // URL returning [{label, message, signature}]; leave empty to use STAFF_MESSAGES fallback
 };
 
 // ── Data ─────────────────────────────────────────────────────────────────────
 
-const AUFGUSS = [{
-  time: "12:00",
-  name: "Start",
-  room: "Finnische Sauna"
-}, {
-  time: "14:00",
-  name: "Birke & Honig",
-  room: "Finnische Sauna"
-}, {
-  time: "15:30",
-  name: "Zirbe Alpenluft",
-  room: "Bio-Sauna"
-}, {
-  time: "17:00",
-  name: "Eukalyptus Klassik",
-  room: "Finnische Sauna"
-}, {
-  time: "18:00",
-  name: "Zitrus Frische",
-  room: "Finnische Sauna"
-}, {
-  time: "22:00",
-  name: "Abendruhe",
-  room: "Finnische Sauna"
-}];
 const STAFF_MESSAGES = [{
   label: "Empfehlung heute",
   message: "Nehmen Sie sich die Zeit, die Sie brauchen — und genießen Sie jeden Atemzug. Heute empfehlen wir die Birke & Honig um 14 Uhr.",
@@ -274,13 +249,13 @@ function useLoadLevel(refreshKey) {
   }, [refreshKey]);
   return level;
 }
-function useOpeningTimes(refreshKey) {
+function useOpeningTimes(url, refreshKey) {
   const [opening, setOpening] = React.useState(null);
   React.useEffect(() => {
-    if (!CONFIG.openingTimesApiUrl) return;
+    if (!url) return;
     async function fetchOpening() {
       try {
-        const res = await fetch(CONFIG.openingTimesApiUrl);
+        const res = await fetch(url);
         if (!res.ok) throw new Error("fetch failed");
         const data = await res.json();
         console.log("Fetched opening times data:", data);
@@ -318,7 +293,7 @@ function useOpeningTimes(refreshKey) {
     fetchOpening();
     const id = setInterval(fetchOpening, 30 * 60 * 1000); // refresh every 30 min
     return () => clearInterval(id);
-  }, [refreshKey]);
+  }, [url, refreshKey]);
   return opening;
 }
 function useStaffMessages(refreshKey) {
@@ -1102,152 +1077,12 @@ function NewsSlideshow({
   }), /*#__PURE__*/React.createElement("span", null, "Mehr an der Rezeption")))));
 }
 
-// ── AufgussBlock ──────────────────────────────────────────────────────────────
-
-function AufgussBlock() {
-  const clock = useClock();
-  const toMinutes = t => {
-    const [h, m] = t.split(":").map(Number);
-    return h * 60 + m;
-  };
-  const currentMinutes = clock.getHours() * 60 + clock.getMinutes();
-
-  // Derive status: "now" for 15 min after start, "gleich" for 10 min before start
-  const items = AUFGUSS.map(a => {
-    const start = toMinutes(a.time);
-    let status;
-    if (currentMinutes >= start + 15) status = "past";else if (currentMinutes >= start) status = "now";else if (currentMinutes >= start - 10) status = "gleich";else status = "upcoming";
-    return {
-      ...a,
-      status
-    };
-  });
-
-  // Anchor for window: first "now", else first "gleich", else last "past", else 0
-  let anchorIndex = items.findIndex(a => a.status === "now");
-  if (anchorIndex === -1) anchorIndex = items.findIndex(a => a.status === "gleich");
-  if (anchorIndex === -1) {
-    const lastPastIdx = items.reduce((acc, a, i) => a.status === "past" ? i : acc, -1);
-    anchorIndex = lastPastIdx >= 0 ? lastPastIdx : 0;
-  }
-
-  // Window of 5: keep anchor at position 2 (index 1) when possible
-  let windowStart = Math.max(0, anchorIndex - 1);
-  windowStart = Math.min(windowStart, Math.max(0, items.length - 5));
-  const displayed = items.slice(windowStart, windowStart + 5);
-  const hasNow = items.some(a => a.status === "now");
-  const hasGleich = !hasNow && items.some(a => a.status === "gleich");
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      gridArea: "aufguss",
-      padding: "26px 36px",
-      background: "#fff",
-      border: "1px solid rgba(40,35,28,0.10)",
-      borderRadius: 4,
-      display: "flex",
-      flexDirection: "column"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between"
-    }
-  }, /*#__PURE__*/React.createElement(SectionLabel, null, "Aufgussplan heute"), hasNow && /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: "'Poppins', sans-serif",
-      fontSize: 12,
-      fontWeight: 500,
-      letterSpacing: "0.22em",
-      textTransform: "uppercase",
-      color: ACCENT
-    }
-  }, "Jetzt läuft"), hasGleich && /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: "'Poppins', sans-serif",
-      fontSize: 12,
-      fontWeight: 500,
-      letterSpacing: "0.22em",
-      textTransform: "uppercase",
-      color: "oklch(0.65 0.14 78)"
-    }
-  }, "Startet gleich")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 14,
-      flex: 1,
-      display: "flex",
-      flexDirection: "column"
-    }
-  }, displayed.map((a, i) => {
-    const past = a.status === "past";
-    const isNow = a.status === "now";
-    const gleich = a.status === "gleich";
-    const timeColor = isNow ? ACCENT : gleich ? "oklch(0.65 0.14 78)" : "#2b2720";
-    return /*#__PURE__*/React.createElement("div", {
-      key: windowStart + i,
-      style: {
-        display: "grid",
-        gridTemplateColumns: "84px 1fr auto",
-        alignItems: "baseline",
-        padding: "10px 0",
-        borderTop: i === 0 ? "none" : "1px dashed rgba(40,35,28,0.10)",
-        opacity: past ? 0.38 : 1
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontFamily: "'Clash Display Variable', sans-serif",
-        fontWeight: 300,
-        fontSize: 26,
-        color: timeColor,
-        fontVariantNumeric: "tabular-nums",
-        textDecoration: past ? "line-through" : "none"
-      }
-    }, a.time), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontFamily: "'Poppins', sans-serif",
-        fontSize: 16,
-        color: "#2b2720",
-        display: "flex",
-        alignItems: "center",
-        gap: 12
-      }
-    }, a.name, isNow && /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 10,
-        fontWeight: 600,
-        letterSpacing: "0.2em",
-        textTransform: "uppercase",
-        color: ACCENT,
-        padding: "3px 8px",
-        border: `1px solid ${ACCENT}`,
-        borderRadius: 2
-      }
-    }, "Läuft"), gleich && /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 10,
-        fontWeight: 600,
-        letterSpacing: "0.2em",
-        textTransform: "uppercase",
-        color: "oklch(0.65 0.14 78)",
-        padding: "3px 8px",
-        border: "1px solid oklch(0.65 0.14 78)",
-        borderRadius: 2
-      }
-    }, "Gleich")), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontFamily: "'Poppins', sans-serif",
-        fontSize: 13,
-        letterSpacing: "0.08em",
-        color: "rgba(40,35,28,0.5)"
-      }
-    }, a.room));
-  })));
-}
-
 // ── ClosingBlock ──────────────────────────────────────────────────────────────
 
 function ClosingBlock({
-  opening
+  opening,
+  label,
+  area
 }) {
   const now = useClock();
   const closeH = opening && !opening.closed && opening.closeH != null ? opening.closeH : 22;
@@ -1272,7 +1107,7 @@ function ClosingBlock({
   }
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      gridArea: "closing",
+      gridArea: area,
       padding: "26px 32px",
       background: "oklch(0.93 0.02 312)",
       borderRadius: 4,
@@ -1280,7 +1115,17 @@ function ClosingBlock({
       flexDirection: "column",
       justifyContent: "space-between"
     }
-  }, /*#__PURE__*/React.createElement(SectionLabel, null, "Öffnungszeiten heute"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(SectionLabel, null, "Öffnungszeiten heute"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontFamily: "'Poppins', sans-serif",
+      fontSize: 24,
+      fontWeight: 500,
+      letterSpacing: "0.22em",
+      textTransform: "uppercase",
+      color: "#2b2720",
+      margin: '0 0 8px'
+    }
+  }, label), /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "'Clash Display Variable', sans-serif",
       fontWeight: 300,
@@ -1297,15 +1142,7 @@ function ClosingBlock({
       lineHeight: 1.5,
       color: "rgba(40,35,28,0.72)"
     }
-  }, opening.details), !opening && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 14,
-      fontFamily: "'Poppins', sans-serif",
-      fontSize: 15,
-      lineHeight: 1.5,
-      color: "rgba(40,35,28,0.72)"
-    }
-  }, "Letzter Einlass um 21:00 · Saunagänge bis 21:30.")), /*#__PURE__*/React.createElement("div", null, !isClosed && /*#__PURE__*/React.createElement("div", {
+  }, opening.details)), /*#__PURE__*/React.createElement("div", null, !isClosed && /*#__PURE__*/React.createElement("div", {
     style: {
       paddingTop: 14,
       borderTop: "1px solid rgba(40,35,28,0.12)",
@@ -1447,7 +1284,8 @@ function App() {
   const handleRefresh = () => setRefreshKey(k => k + 1);
   const news = useNews(refreshKey);
   const level = useLoadLevel(refreshKey);
-  const opening = useOpeningTimes(refreshKey);
+  const openingFreibad = useOpeningTimes(CONFIG.openingTimesApiUrlFreibad, refreshKey);
+  const openingSauna = useOpeningTimes(CONFIG.openingTimesApiUrlSauna, refreshKey);
   const staffMessages = useStaffMessages(refreshKey);
   const hasNews = news !== null && news.length > 0;
   const showNewsColumn = CONFIG.showNews && hasNews;
@@ -1515,13 +1353,19 @@ function App() {
     style: {
       padding: "22px 48px 36px",
       display: "grid",
-      gridTemplateColumns: CONFIG.showAufgussplan ? hasStaff ? "1.4fr 0.85fr 1.1fr" : "1.4fr 1fr" : hasStaff ? "1fr 1.3fr" : "1fr",
-      gridTemplateAreas: CONFIG.showAufgussplan ? hasStaff ? `"aufguss closing staff"` : `"aufguss closing"` : hasStaff ? `"closing staff"` : `"closing"`,
+      gridTemplateColumns: hasStaff ? "1fr 1fr 1.3fr" : "1fr 1fr",
+      gridTemplateAreas: hasStaff ? `"freibad sauna staff"` : `"freibad sauna"`,
       gap: 22,
       height: 300
     }
-  }, CONFIG.showAufgussplan && /*#__PURE__*/React.createElement(AufgussBlock, null), /*#__PURE__*/React.createElement(ClosingBlock, {
-    opening: opening
+  }, /*#__PURE__*/React.createElement(ClosingBlock, {
+    opening: openingFreibad,
+    label: "Freibad",
+    area: "freibad"
+  }), /*#__PURE__*/React.createElement(ClosingBlock, {
+    opening: openingSauna,
+    label: "Sauna",
+    area: "sauna"
   }), hasStaff && /*#__PURE__*/React.createElement(StaffMessageBlock, {
     messages: staffMessages
   })))));
