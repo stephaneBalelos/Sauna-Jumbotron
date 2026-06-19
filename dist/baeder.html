@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Saunahuus · Status</title>
+  <meta name="viewport" content="width=1920">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    @font-face {
+      font-family: 'Clash Display Variable';
+      src: url('fonts/ClashDisplay-Variable.woff2') format('woff2'),
+           url('fonts/ClashDisplay-Variable.woff') format('woff');
+      font-weight: 200 700;
+      font-display: swap;
+      font-style: normal;
+    }
+    html, body { margin: 0; padding: 0; background: #ece6dc; overflow: hidden; font-family: 'Poppins', system-ui, sans-serif; color: #2b2720; }
+    * { box-sizing: border-box; }
+    #root { width: 100vw; height: 100vh; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 4px rgba(79,178,107,0.18); }
+      50%       { opacity: 0.7; box-shadow: 0 0 0 8px rgba(79,178,107,0.05); }
+    }
+    @keyframes slideInFromRight {
+      from { opacity: 0; transform: translateX(48px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideInFromLeft {
+      from { opacity: 0; transform: translateX(-48px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="baeder.js"></script>
+</body>
+</html>
