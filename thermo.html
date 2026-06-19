@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<title>Thermometer</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ece6dc;
+    font-family: system-ui, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+
+  .thermo-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .thermo-box {
+    padding: 10px 11px;
+    background: #1c1a16;
+    border-radius: 9px;
+    box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.08), 0 10px 20px -10px rgba(0,0,0,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .thermo-box svg {
+    overflow: visible;
+  }
+
+  /* Ambient glow radiating from bulb */
+  .thermo-glow {
+    opacity: 0.2;
+    filter: blur(14px);
+    transition: fill 0.6s ease;
+  }
+
+  /* Mercury — bulb (always full) */
+  .thermo-bulb-fill {
+    transition: fill 0.6s ease, filter 0.6s ease;
+  }
+
+  /* Mercury — column (rises/falls with status) */
+  .thermo-column {
+    transition: y 0.9s cubic-bezier(0.4,0,0.2,1), height 0.9s cubic-bezier(0.4,0,0.2,1), fill 0.6s ease;
+  }
+
+  /* Status colors — set via data-status on the wrapper */
+  .thermo-wrap[data-status="status-gruen"] .thermo-glow,
+  .thermo-wrap[data-status="status-gruen"] .thermo-bulb-fill,
+  .thermo-wrap[data-status="status-gruen"] .thermo-column {
+    fill: oklch(0.62 0.14 148);
+  }
+  .thermo-wrap[data-status="status-gruen"] .thermo-bulb-fill {
+    filter: drop-shadow(0 0 8px oklch(0.62 0.14 148));
+  }
+  .thermo-wrap[data-status="status-gruen"] .thermo-column {
+    y: 178.24px;
+    height: 45.76px;
+  }
+
+  .thermo-wrap[data-status="status-gelb"] .thermo-glow,
+  .thermo-wrap[data-status="status-gelb"] .thermo-bulb-fill,
+  .thermo-wrap[data-status="status-gelb"] .thermo-column {
+    fill: oklch(0.72 0.15 78);
+  }
+  .thermo-wrap[data-status="status-gelb"] .thermo-bulb-fill {
+    filter: drop-shadow(0 0 8px oklch(0.72 0.15 78));
+  }
+  .thermo-wrap[data-status="status-gelb"] .thermo-column {
+    y: 103.36px;
+    height: 120.64px;
+  }
+
+  .thermo-wrap[data-status="status-rot"] .thermo-glow,
+  .thermo-wrap[data-status="status-rot"] .thermo-bulb-fill,
+  .thermo-wrap[data-status="status-rot"] .thermo-column {
+    fill: oklch(0.60 0.18 28);
+  }
+  .thermo-wrap[data-status="status-rot"] .thermo-bulb-fill {
+    filter: drop-shadow(0 0 8px oklch(0.60 0.18 28));
+  }
+  .thermo-wrap[data-status="status-rot"] .thermo-column {
+    y: 32.64px;
+    height: 191.36px;
+  }
+
+  .thermo-buttons {
+    display: flex;
+    gap: 12px;
+  }
+
+  .thermo-buttons button {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 1px solid rgba(40,35,28,0.2);
+    background: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .thermo-buttons button.active {
+    border-color: #2b2720;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+  <div class="thermo-wrap" data-status="status-gruen">
+    <div class="thermo-box">
+      <svg width="40" height="145" viewBox="0 0 80 290">
+        <defs>
+          <!-- Clip the mercury column to the inner tube shape -->
+          <clipPath id="thermo-tube-clip">
+            <rect x="32" y="16" width="16" height="208" rx="8" />
+          </clipPath>
+        </defs>
+
+        <!-- Ambient glow radiating from bulb -->
+        <circle class="thermo-glow" cx="40" cy="256" r="50" />
+
+        <!-- Glass tube -->
+        <rect x="25" y="10" width="30" height="218" rx="15"
+          fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)" stroke-width="1" />
+
+        <!-- Glass bulb -->
+        <circle cx="40" cy="256" r="27"
+          fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)" stroke-width="1" />
+
+        <!-- Mercury — bulb (always full) -->
+        <circle class="thermo-bulb-fill" cx="40" cy="256" r="20" />
+
+        <!-- Mercury — column (rises/falls with status) -->
+        <g clip-path="url(#thermo-tube-clip)">
+          <rect class="thermo-column" x="32" width="16" />
+        </g>
+
+        <!-- Graduation ticks at 25 / 50 / 75 % -->
+        <line x1="49" y1="172" x2="57" y2="172" stroke="rgba(255,255,255,0.22)" stroke-width="1" stroke-linecap="round" />
+        <line x1="49" y1="120" x2="57" y2="120" stroke="rgba(255,255,255,0.22)" stroke-width="1" stroke-linecap="round" />
+        <line x1="49" y1="68"  x2="57" y2="68"  stroke="rgba(255,255,255,0.22)" stroke-width="1" stroke-linecap="round" />
+
+        <!-- Tube shine highlight -->
+        <rect x="34" y="14" width="5" height="210" rx="2.5" fill="rgba(255,255,255,0.07)" />
+      </svg>
+    </div>
+
+    <div class="thermo-buttons">
+      <button type="button" class="active" data-status="status-gruen">Grün</button>
+      <button type="button" data-status="status-gelb">Gelb</button>
+      <button type="button" data-status="status-rot">Rot</button>
+    </div>
+  </div>
+
+  <script>
+    const wrap = document.querySelector('.thermo-wrap');
+    document.querySelectorAll('.thermo-buttons button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        wrap.dataset.status = btn.dataset.status;
+        document.querySelectorAll('.thermo-buttons button').forEach(b => b.classList.toggle('active', b === btn));
+      });
+    });
+  </script>
+
+</body>
+</html>

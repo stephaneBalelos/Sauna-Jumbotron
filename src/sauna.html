@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Saunahuus · Status</title>
+  <meta name="viewport" content="width=1920">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    @font-face {
+      font-family: 'Clash Display Variable';
+      src: url('fonts/ClashDisplay-Variable.woff2') format('woff2'),
+           url('fonts/ClashDisplay-Variable.woff') format('woff');
+      font-weight: 200 700;
+      font-display: swap;
+      font-style: normal;
+    }
+    html, body { margin: 0; padding: 0; background: #ece6dc; overflow: hidden; font-family: 'Poppins', system-ui, sans-serif; color: #2b2720; }
+    * { box-sizing: border-box; }
+    #root { width: 100vw; height: 100vh; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 4px rgba(79,178,107,0.18); }
+      50%       { opacity: 0.7; box-shadow: 0 0 0 8px rgba(79,178,107,0.05); }
+    }
+    @keyframes slideInFromRight {
+      from { opacity: 0; transform: translateX(48px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideInFromLeft {
+      from { opacity: 0; transform: translateX(-48px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel" data-presets="react">
+
+// ── Config ──────────────────────────────────────────────────────────────────
+// Edit these values to update the display without touching anything else.
+
+const CONFIG = {
+  load:             "gruen",   // fallback when loadApiUrl is unset or unavailable: "gruen" | "gelb" | "rot"
+  loadApiUrl:       "https://n8n2.stephanedondyas.cloud/webhook/0fba5f17-df93-4083-a1ec-2c355a68156c",        // URL returning { status: "gruen"|"gelb"|"rot", label, head, body }
+  accentHex:        "#D87A7A", // accent colour (pinkish-red by default)
+  logoUrl:          "https://cdn.prod.website-files.com/66b1df72c5f8c23c973ec3e2/66c721715f80b6d218e15734_logo-saunahuus.png.webp",        // URL of the logo image shown in the top bar; leave empty to show text fallback
+  slideshowSeconds: 7,         // seconds per news slide
+  showAufgussplan: false,       // set to false to hide the Aufgussplan column
+  showNews:        false,       // set to false to hide the news slideshow column
+  // 53.03308452669527, 8.55818828907121, Saunahuus Ganderkesee
+  weatherLat:       53.0330845,
+  weatherLon:       8.5581883,
+  newsApiUrl:       "https://n8n2.stephanedondyas.cloud/webhook/8fe2c340-13ee-485d-8c66-710c2ef83178",        // URL returning [{lastPublished, title, body, kicker?, caption?, image?}]
+  openingTimesApiUrl:  "https://n8n2.stephanedondyas.cloud/webhook/4bf2357a-32e5-4c17-82dc-702763324ee3",                             // URL returning [{zeitraum, details, "tage-der-woche"}]
+  staffMessagesApiUrl: "https://n8n2.stephanedondyas.cloud/webhook/b5c6baa1-4d50-49ec-bb78-7efa37f07f4e",                                                                                                            // URL returning [{label, message, signature}]; leave empty to use STAFF_MESSAGES fallback
+};
+
+// ── Data ─────────────────────────────────────────────────────────────────────
+
+const AUFGUSS = [
+  { time: "12:00", name: "Start",    room: "Finnische Sauna",     },
+  { time: "14:00", name: "Birke & Honig",    room: "Finnische Sauna",     },
+  { time: "15:30", name: "Zirbe Alpenluft",  room: "Bio-Sauna",            },
+  { time: "17:00", name: "Eukalyptus Klassik",room:"Finnische Sauna",     },
+  { time: "18:00", name: "Zitrus Frische",   room: "Finnische Sauna", },
+  { time: "22:00", name: "Abendruhe",        room: "Finnische Sauna", },
+];
+
+const STAFF_MESSAGES = [
+  {
+    label:     "Empfehlung heute",
+    message:   "Nehmen Sie sich die Zeit, die Sie brauchen — und genießen Sie jeden Atemzug. Heute empfehlen wir die Birke & Honig um 14 Uhr.",
+    signature: "Marlene & Johann",
+  },
+  {
+    label:     "Gut zu wissen",
+    message:   "Bitte denken Sie daran, ausreichend Wasser zu trinken — an unserem Wasserspender stehen frische Aufgüsse bereit.",
+    signature: "Ihr Saunahuus-Team",
+  },
+  {
+    label:     "Herzlich willkommen",
+    message:   "Schön, dass Sie heute bei uns sind. Entspannen Sie sich in aller Ruhe — wir sind für Sie da.",
+    signature: "Das Saunahuus-Team",
+  },
+];
+
+// Fallback shown while the first fetch is in flight or if the network is unavailable.
+const WEATHER_FALLBACK = { temp: "--", condition: "cloudy", conditionDe: "…", hi: "--", lo: "--" };
+
+const LOAD_LEVELS = {
+  gruen: {
+    label: "Grünes Licht",
+    head:  "Willkommen — kommen Sie gerne vorbei",
+    body:  "In unserer Sauna ist noch ausreichend Platz für weitere Gäste.",
+    color: "oklch(0.62 0.14 148)",
+    soft:  "oklch(0.95 0.04 148)",
+    ring:  "oklch(0.80 0.10 148)",
+  },
+  gelb: {
+    label: "Gelbes Licht",
+    head:  "Gut besucht — aber noch Plätze frei",
+    body:  "Die Auslastung ist erhöht. Mit etwas Geduld finden Sie jedoch einen Platz.",
+    color: "oklch(0.72 0.15 78)",
+    soft:  "oklch(0.96 0.04 85)",
+    ring:  "oklch(0.85 0.10 80)",
+  },
+  rot: {
+    label: "Rotes Licht",
+    head:  "Aktuell voll belegt",
+    body:  "Wir bitten um etwas Wartezeit. Gern benachrichtigen wir Sie, sobald wieder Platz ist.",
+    color: "oklch(0.60 0.18 28)",
+    soft:  "oklch(0.95 0.035 28)",
+    ring:  "oklch(0.80 0.12 28)",
+  },
+};
+
+const WEEKDAYS_DE = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
+const MONTHS_DE   = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+
+const ACCENT = "var(--accent)";
+
+// ── Hooks ─────────────────────────────────────────────────────────────────────
+
+function useClock() {
+  const [now, setNow] = React.useState(() => new Date());
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
+function useStageScale() {
+  const [scale, setScale] = React.useState(1);
+  React.useEffect(() => {
+    const fit = () => setScale(Math.min(window.innerWidth / 1920, window.innerHeight / 1080));
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
+  return scale;
+}
+
+// Maps WMO weather-code → { condition, conditionDe }
+// Open-Meteo uses WMO standard codes: https://open-meteo.com/en/docs#weathervariables
+function wmoToCondition(code) {
+  if (code === 0)                        return { condition: "sunny",  conditionDe: "Sonnig"         };
+  if (code === 1)                        return { condition: "sunny",  conditionDe: "Leicht bewölkt" };
+  if (code === 2 || code === 3)          return { condition: "cloudy", conditionDe: "Bewölkt"        };
+  if (code === 45 || code === 48)        return { condition: "cloudy", conditionDe: "Neblig"         };
+  if (code >= 51 && code <= 55)          return { condition: "rainy",  conditionDe: "Nieselregen"    };
+  if (code >= 61 && code <= 67)          return { condition: "rainy",  conditionDe: "Regen"          };
+  if (code >= 71 && code <= 77)          return { condition: "rainy",  conditionDe: "Schnee"         };
+  if (code >= 80 && code <= 82)          return { condition: "rainy",  conditionDe: "Regenschauer"   };
+  if (code >= 85 && code <= 86)          return { condition: "rainy",  conditionDe: "Schneeschauer"  };
+  if (code >= 95)                        return { condition: "rainy",  conditionDe: "Gewitter"       };
+  return { condition: "cloudy", conditionDe: "Bewölkt" };
+}
+
+function useWeather(refreshKey) {
+  const [weather, setWeather] = React.useState(WEATHER_FALLBACK);
+
+  React.useEffect(() => {
+    const url =
+      `https://api.open-meteo.com/v1/forecast` +
+      `?latitude=${CONFIG.weatherLat}&longitude=${CONFIG.weatherLon}` +
+      `&current=temperature_2m,weather_code` +
+      `&daily=temperature_2m_max,temperature_2m_min` +
+      `&timezone=auto&forecast_days=1`;
+
+    async function fetchWeather() {
+      try {
+        const res  = await fetch(url);
+        const data = await res.json();
+        const { condition, conditionDe } = wmoToCondition(data.current.weather_code);
+        setWeather({
+          temp:        Math.round(data.current.temperature_2m),
+          hi:          Math.round(data.daily.temperature_2m_max[0]),
+          lo:          Math.round(data.daily.temperature_2m_min[0]),
+          condition,
+          conditionDe,
+        });
+      } catch {
+        // keep whatever was last shown (or the fallback on first load)
+      }
+    }
+
+    fetchWeather();
+    const id = setInterval(fetchWeather, 10 * 60 * 1000); // refresh every 10 min
+    return () => clearInterval(id);
+  }, [refreshKey]);
+
+  return weather;
+}
+
+function useNews(refreshKey) {
+  const [news, setNews] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!CONFIG.newsApiUrl) return;
+
+    async function fetchNews() {
+      try {
+        const res = await fetch(CONFIG.newsApiUrl);
+        if (!res.ok) throw new Error("fetch failed");
+        const data = await res.json();
+        console.log("Fetched news data:", data);
+        const items = data[0].data ? data[0].data : [];
+        if (items.length === 0) { setNews(null); return; }
+        const sorted = [...items]
+          .sort((a, b) => new Date(b.lastPublished) - new Date(a.lastPublished))
+          .slice(0, 5);
+        setNews(sorted);
+      } catch {
+        setNews(null);
+      }
+    }
+
+    fetchNews();
+    const id = setInterval(fetchNews, 5 * 60 * 1000); // refresh every 5 min
+    return () => clearInterval(id);
+  }, [refreshKey]);
+
+  return news;
+}
+
+function useLoadLevel(refreshKey) {
+  const [level, setLevel] = React.useState(() => {
+    const base = LOAD_LEVELS[CONFIG.load] || LOAD_LEVELS.gruen;
+    return { status: CONFIG.load, ...base };
+  });
+
+  React.useEffect(() => {
+    if (!CONFIG.loadApiUrl) return;
+
+    async function fetchLoad() {
+      try {
+        const res = await fetch(CONFIG.loadApiUrl);
+        if (!res.ok) throw new Error("fetch failed");
+        const data = await res.json();
+        const { status, items } = data;
+        const s = status === 'status-rot' ? 'rot' : status === 'status-gelb' ? 'gelb' : 'gruen';
+        const currentStatus = items && items.length > 0 ? items[0] : {};
+        const label = currentStatus.label || LOAD_LEVELS[s]?.label || "Unbekannt";
+        const head  = currentStatus.head  || LOAD_LEVELS[s]?.head  || "";
+        const body  = currentStatus.body  || LOAD_LEVELS[s]?.body  || "";
+        const colors = LOAD_LEVELS[s] || LOAD_LEVELS.gruen;
+        setLevel({ status: s, label, head, body, color: colors.color, soft: colors.soft, ring: colors.ring });
+      } catch {
+        // keep whatever was last shown
+      }
+    }
+
+    fetchLoad();
+    const id = setInterval(fetchLoad, 1 * 60 * 1000); // refresh every 1 min
+    return () => clearInterval(id);
+  }, [refreshKey]);
+
+  return level;
+}
+
+function useOpeningTimes(refreshKey) {
+  const [opening, setOpening] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!CONFIG.openingTimesApiUrl) return;
+
+    async function fetchOpening() {
+      try {
+        const res = await fetch(CONFIG.openingTimesApiUrl);
+        if (!res.ok) throw new Error("fetch failed");
+        const data = await res.json();
+        console.log("Fetched opening times data:", data);
+        const items = Array.isArray(data) ? data : (data.data || []);
+
+        // JS getDay(): 0=Sun,1=Mon…6=Sat → ISO weekday: Mon=1…Sun=7
+        const jsDay = new Date().getDay();
+        const isoDay = jsDay === 0 ? 7 : jsDay;
+
+        const match = items.find(item => {
+          const days = String(item["tage-der-woche"] || "")
+            .split(",")
+            .map(d => parseInt(d.trim(), 10))
+            .filter(d => !isNaN(d));
+          return days.includes(isoDay);
+        });
+
+        if (!match) { setOpening({ closed: true }); return; }
+
+        // Parse "HH:MM - HH:MM Uhr" → { openH, openM, closeH, closeM }
+        const m = String(match.zeitraum || "").match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
+        setOpening({
+          closed:   false,
+          zeitraum: match.zeitraum,
+          details:  match.details || "",
+          openH:    m ? parseInt(m[1], 10) : null,
+          openM:    m ? parseInt(m[2], 10) : 0,
+          closeH:   m ? parseInt(m[3], 10) : 22,
+          closeM:   m ? parseInt(m[4], 10) : 0,
+        });
+      } catch {
+        setOpening(null);
+      }
+    }
+
+    fetchOpening();
+    const id = setInterval(fetchOpening, 30 * 60 * 1000); // refresh every 30 min
+    return () => clearInterval(id);
+  }, [refreshKey]);
+
+  return opening;
+}
+
+function useStaffMessages(refreshKey) {
+  const initial = !CONFIG.staffMessagesApiUrl && STAFF_MESSAGES.length > 0 ? STAFF_MESSAGES : null;
+  const [messages, setMessages] = React.useState(initial);
+
+  React.useEffect(() => {
+    if (!CONFIG.staffMessagesApiUrl) return;
+
+    async function fetchMessages() {
+      try {
+        const res = await fetch(CONFIG.staffMessagesApiUrl);
+        if (!res.ok) throw new Error("fetch failed");
+        const data = await res.json();
+        const items = Array.isArray(data) ? data : (data.data || []);
+        setMessages(items.length > 0 ? items : null);
+      } catch {
+        setMessages(null);
+      }
+    }
+
+    fetchMessages();
+    const id = setInterval(fetchMessages, 5 * 60 * 1000); // refresh every 5 min
+    return () => clearInterval(id);
+  }, [refreshKey]);
+
+  return messages;
+}
+
+// ── Primitives ────────────────────────────────────────────────────────────────
+
+function PlaceholderPhoto({ label, tone = "warm", style }) {
+  const bg = tone === "cool" ? ["#E7ECEF","#DBE2E7"]
+           : tone === "wood" ? ["#E8DCC8","#DECBAE"]
+           :                   ["#EFE5DB","#E4D6C6"];
+  return (
+    <div style={{
+      position: "relative", overflow: "hidden", borderRadius: 2,
+      background: `repeating-linear-gradient(135deg, ${bg[0]} 0 14px, ${bg[1]} 14px 28px)`,
+      ...style
+    }}>
+      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "flex-end", padding: "18px 22px" }}>
+        <span style={{
+          fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace",
+          fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase",
+          color: "rgba(40,35,28,0.55)",
+          background: "rgba(255,255,255,0.7)", padding: "4px 8px", borderRadius: 2,
+          backdropFilter: "blur(2px)"
+        }}>{label}</span>
+      </div>
+    </div>
+  );
+}
+
+function SectionLabel({ children, style }) {
+  return (
+    <div style={{
+      fontFamily: "'Poppins', sans-serif",
+      fontSize: 13, fontWeight: 500, letterSpacing: "0.22em",
+      textTransform: "uppercase", color: "rgba(40,35,28,0.45)",
+      ...style
+    }}>{children}</div>
+  );
+}
+
+// ── TopBar ────────────────────────────────────────────────────────────────────
+
+function TopBar({ onRefresh }) {
+  const [spinning, setSpinning] = React.useState(false);
+
+  const handleRefresh = () => {
+    if (spinning) return;
+    setSpinning(true);
+    onRefresh();
+    setTimeout(() => setSpinning(false), 800);
+  };
+
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "16px 64px 0"
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+        {CONFIG.logoUrl
+          ? <img src={CONFIG.logoUrl} alt="Logo" style={{ height: 40, width: "auto", display: "block" }} />
+          : <div style={{
+              fontFamily: "'Clash Display Variable', sans-serif",
+              fontWeight: 300, fontSize: 30, letterSpacing: "0.34em", color: "#2b2720"
+            }}>SAUNAHUUS</div>
+        }
+        <div style={{
+          fontFamily: "'Poppins', sans-serif", fontSize: 12, fontWeight: 500,
+          letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(40,35,28,0.45)",
+        }}>Status · Aushang</div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{
+            width: 8, height: 8, borderRadius: "50%", background: "#4fb26b",
+            boxShadow: "0 0 0 4px rgba(79,178,107,0.18)",
+            animation: "pulse 2s ease-in-out infinite", display: "inline-block"
+          }} />
+          <span style={{
+            fontFamily: "'Poppins', sans-serif", fontSize: 12, fontWeight: 500,
+            letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(40,35,28,0.55)"
+          }}>Live · aktualisiert gerade eben</span>
+        </div>
+        <button onClick={handleRefresh} title="Alle Daten neu laden" style={{
+          background: "none",
+          border: "1px solid rgba(40,35,28,0.18)",
+          borderRadius: "50%",
+          width: 30, height: 30,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", padding: 0,
+          color: "rgba(40,35,28,0.40)",
+          flexShrink: 0
+        }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            style={{ animation: spinning ? "spin 0.7s linear" : "none" }}>
+            <polyline points="23 4 23 10 17 10" />
+            <polyline points="1 20 1 14 7 14" />
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── ClockBlock ────────────────────────────────────────────────────────────────
+
+function ClockBlock() {
+  const now = useClock();
+  const hh   = String(now.getHours()).padStart(2, "0");
+  const mm   = String(now.getMinutes()).padStart(2, "0");
+  const ss   = String(now.getSeconds()).padStart(2, "0");
+  const date = `${WEEKDAYS_DE[now.getDay()]}, ${now.getDate()}. ${MONTHS_DE[now.getMonth()]} ${now.getFullYear()}`;
+
+  return (
+    <div style={{
+      gridArea: "clock",
+      display: "flex", flexDirection: "column", justifyContent: "space-between",
+      padding: "28px 36px",
+      borderRight: "1px solid rgba(40,35,28,0.10)"
+    }}>
+      <SectionLabel>Uhrzeit</SectionLabel>
+      <div>
+        <div style={{
+          fontFamily: "'Clash Display Variable', sans-serif",
+          fontWeight: 300, fontSize: 96, lineHeight: 0.95, letterSpacing: "-0.01em",
+          color: "#2b2720", fontVariantNumeric: "tabular-nums",
+          display: "flex", alignItems: "baseline", gap: 2
+        }}>
+          <span>{hh}</span>
+          <span style={{ opacity: 0.3 }}>:</span>
+          <span>{mm}</span>
+          <span style={{ fontSize: 32, color: ACCENT, marginLeft: 10, fontVariantNumeric: "tabular-nums" }}>:{ss}</span>
+        </div>
+        <div style={{
+          marginTop: 10, fontFamily: "'Poppins', sans-serif", fontSize: 18,
+          color: "rgba(40,35,28,0.65)"
+        }}>{date}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── WeatherBlock ──────────────────────────────────────────────────────────────
+
+function WeatherGlyph({ kind, size = 56 }) {
+  const stroke = "#2b2720";
+  if (kind === "sunny") return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
+      <circle cx="32" cy="32" r="11" stroke={stroke} strokeWidth="1.5" />
+      {[0,45,90,135,180,225,270,315].map(a => {
+        const r = a * Math.PI / 180;
+        return <line key={a}
+          x1={32 + Math.cos(r)*18} y1={32 + Math.sin(r)*18}
+          x2={32 + Math.cos(r)*26} y2={32 + Math.sin(r)*26}
+          stroke={stroke} strokeWidth="1.5" strokeLinecap="round" />;
+      })}
+    </svg>
+  );
+  if (kind === "cloudy") return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
+      <circle cx="22" cy="34" r="10" stroke={stroke} strokeWidth="1.5" />
+      <circle cx="36" cy="30" r="12" stroke={stroke} strokeWidth="1.5" />
+      <circle cx="46" cy="36" r="8"  stroke={stroke} strokeWidth="1.5" />
+      <line x1="14" y1="46" x2="52" y2="46" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+  if (kind === "rainy") return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
+      <circle cx="26" cy="28" r="10" stroke={stroke} strokeWidth="1.5" />
+      <circle cx="40" cy="24" r="12" stroke={stroke} strokeWidth="1.5" />
+      <line x1="22" y1="44" x2="19" y2="52" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="32" y1="44" x2="29" y2="52" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="42" y1="44" x2="39" y2="52" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+  return null;
+}
+
+function WeatherBlock({ refreshKey }) {
+  const { temp, condition, conditionDe, hi, lo } = useWeather(refreshKey);
+  return (
+    <div style={{
+      gridArea: "weather",
+      display: "flex", flexDirection: "column", justifyContent: "space-between",
+      padding: "28px 36px"
+    }}>
+      <SectionLabel>Draußen</SectionLabel>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 28 }}>
+        <WeatherGlyph kind={condition} size={88} />
+        <div style={{ display: "flex", alignItems: "baseline" }}>
+          <span style={{
+            fontFamily: "'Clash Display Variable', sans-serif", fontWeight: 300,
+            fontSize: 96, lineHeight: 0.95, letterSpacing: "-0.02em",
+            color: "#2b2720", fontVariantNumeric: "tabular-nums"
+          }}>{temp}</span>
+          <span style={{
+            fontFamily: "'Clash Display Variable', sans-serif", fontWeight: 300,
+            fontSize: 48, color: ACCENT, marginLeft: 4
+          }}>°C</span>
+        </div>
+      </div>
+      <div style={{
+        display: "flex", alignItems: "baseline", justifyContent: "space-between",
+        fontFamily: "'Poppins', sans-serif", fontSize: 16
+      }}>
+        <span style={{ color: "#2b2720" }}>{conditionDe}</span>
+        <span style={{ color: "rgba(40,35,28,0.55)", fontVariantNumeric: "tabular-nums" }}>
+          H {hi}° &nbsp;·&nbsp; T {lo}°
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ── LoadHero ──────────────────────────────────────────────────────────────────
+
+function Thermometer({ status, color }) {
+  // Mercury fill level per status (0 = empty bottom, 1 = full top)
+  const fillRatio = { gruen: 0.22, gelb: 0.58, rot: 0.92 }[status] ?? 0.22;
+
+  // SVG geometry constants (viewBox "0 0 80 290")
+  const cx         = 40;
+  const tubeTopY   = 16;
+  const tubeBottomY= 224;   // where tube meets bulb
+  const tubeH      = tubeBottomY - tubeTopY;  // 208
+  const tubeInnerW = 16;
+  const tubeInnerX = cx - tubeInnerW / 2;     // 32
+  const bulbCY     = 256;
+  const bulbOuterR = 27;
+  const bulbInnerR = 20;
+  const mercuryTopY = tubeBottomY - fillRatio * tubeH;
+
+  return (
+    <div style={{
+      padding: "20px 22px",
+      background: "#1c1a16", borderRadius: 18,
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 20px 40px -20px rgba(0,0,0,0.35)",
+      display: "flex", alignItems: "center", justifyContent: "center"
+    }}>
+      <svg width="80" height="290" viewBox="0 0 80 290" style={{ overflow: "visible" }}>
+        <defs>
+          {/* Clip the mercury column to the inner tube shape */}
+          <clipPath id="thermo-tube-clip">
+            <rect x={tubeInnerX} y={tubeTopY} width={tubeInnerW} height={tubeH} rx={tubeInnerW / 2} />
+          </clipPath>
+        </defs>
+
+        {/* Ambient glow radiating from bulb */}
+        <circle cx={cx} cy={bulbCY} r={50}
+          style={{ fill: color, opacity: 0.2, filter: "blur(14px)", transition: "fill 0.6s ease" }} />
+
+        {/* Glass tube */}
+        <rect x={cx - 15} y={10} width={30} height={218} rx={15}
+          fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)" strokeWidth={1} />
+
+        {/* Glass bulb */}
+        <circle cx={cx} cy={bulbCY} r={bulbOuterR}
+          fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)" strokeWidth={1} />
+
+        {/* Mercury — bulb (always full) */}
+        <circle cx={cx} cy={bulbCY} r={bulbInnerR}
+          style={{
+            fill: color,
+            filter: `drop-shadow(0 0 8px ${color})`,
+            transition: "fill 0.6s ease"
+          }} />
+
+        {/* Mercury — column (rises/falls with status) */}
+        <g clipPath="url(#thermo-tube-clip)">
+          <rect style={{
+            x: tubeInnerX,
+            y: mercuryTopY,
+            width: tubeInnerW,
+            height: tubeBottomY - mercuryTopY,
+            fill: color,
+            transition: "y 0.9s cubic-bezier(0.4,0,0.2,1), height 0.9s cubic-bezier(0.4,0,0.2,1), fill 0.6s ease"
+          }} />
+        </g>
+
+        {/* Graduation ticks at 25 / 50 / 75 % */}
+        {[0.25, 0.5, 0.75].map(t => {
+          const y = tubeBottomY - t * tubeH;
+          return (
+            <line key={t}
+              x1={cx + 9} y1={y} x2={cx + 17} y2={y}
+              stroke="rgba(255,255,255,0.22)" strokeWidth={1} strokeLinecap="round" />
+          );
+        })}
+
+        {/* Tube shine highlight */}
+        <rect x={tubeInnerX + 2} y={14} width={5} height={210} rx={2.5}
+          fill="rgba(255,255,255,0.07)" />
+      </svg>
+    </div>
+  );
+}
+
+function LoadHero({ level }) {
+  return (
+    <div style={{
+      gridArea: "load",
+      position: "relative",
+      display: "flex", alignItems: "center", gap: 56,
+      padding: "56px 40px",
+      background: level.soft,
+      border: `1px solid ${level.ring}`,
+      borderRadius: 4,
+      overflow: "hidden"
+    }}>
+      <div style={{
+        position: "absolute", right: -180, top: -180, width: 520, height: 520,
+        borderRadius: "50%",
+        background: `radial-gradient(circle, ${level.color}22 0%, transparent 70%)`,
+        pointerEvents: "none"
+      }} />
+      <Thermometer status={level.status} color={level.color} />
+      <div style={{ flex: 1, position: "relative" }}>
+        <SectionLabel style={{ color: level.color, opacity: 0.8 }}>
+          Aktuelle Auslastung Sauna
+        </SectionLabel>
+        <div style={{
+          marginTop: 12,
+          fontFamily: "'Clash Display Variable', sans-serif", fontWeight: 300,
+          fontSize: 104, lineHeight: 1, letterSpacing: "-0.015em",
+          color: level.color
+        }}>
+          {level.label}
+        </div>
+        <div style={{
+          marginTop: 20,
+          fontFamily: "'Clash Display Variable', sans-serif", fontWeight: 300,
+          fontSize: 32, lineHeight: 1.25, color: "#2b2720", maxWidth: 640
+        }}>
+          {level.head}
+        </div>
+        <div style={{
+          marginTop: 12,
+          fontFamily: "'Poppins', sans-serif", fontSize: 17, lineHeight: 1.55,
+          color: "rgba(40,35,28,0.65)", maxWidth: 620
+        }}>
+          {level.body}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── NewsSlideshow ─────────────────────────────────────────────────────────────
+
+function NewsSlideshow({ news, seconds }) {
+  const [idx, setIdx]       = React.useState(0);
+  const [prog, setProg]     = React.useState(0);
+  const [dir, setDir]       = React.useState(1); // 1 = forward (right→left), -1 = backward
+
+  // Reset to first slide whenever the news data changes.
+  React.useEffect(() => { setIdx(0); setProg(0); setDir(1); }, [news]);
+
+  React.useEffect(() => {
+    if (!news || news.length === 0) return;
+    setProg(0);
+    const start = performance.now();
+    let raf;
+    const tick = t => {
+      const p = Math.min(1, (t - start) / (seconds * 1000));
+      setProg(p);
+      if (p < 1) raf = requestAnimationFrame(tick);
+      else { setDir(1); setIdx(i => (i + 1) % news.length); }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [idx, seconds, news]);
+
+  if (!news || news.length === 0) return null;
+
+  const safeIdx = idx % news.length;
+  const item = news[safeIdx];
+  const slideAnim = dir >= 0 ? "slideInFromRight 0.5s cubic-bezier(0.22,1,0.36,1) both"
+                              : "slideInFromLeft  0.5s cubic-bezier(0.22,1,0.36,1) both";
+
+  return (
+    <div style={{
+      gridArea: "news",
+      display: "flex", flexDirection: "column",
+      background: "#fff",
+      border: "1px solid rgba(40,35,28,0.10)",
+      borderRadius: 4,
+      overflow: "hidden"
+    }}>
+      {/* Header row */}
+      <div style={{
+        padding: "22px 32px 14px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        borderBottom: "1px solid rgba(40,35,28,0.08)"
+      }}>
+        <SectionLabel>Was gibt's Neues?</SectionLabel>
+        <div style={{ display: "flex", gap: 6 }}>
+          {news.map((_, i) => (
+            <div key={i} style={{
+              width: 28, height: 3, borderRadius: 2,
+              background: i === safeIdx ? "rgba(40,35,28,0.15)" : "rgba(40,35,28,0.07)",
+              overflow: "hidden", position: "relative"
+            }}>
+              {i === safeIdx && (
+                <div style={{
+                  position: "absolute", inset: 0,
+                  width: `${prog * 100}%`, background: ACCENT, borderRadius: 2
+                }} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div key={safeIdx} style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: 0, animation: slideAnim }}>
+        <div style={{ padding: 24 }}>
+          {item.image
+            ? <img src={item.image} alt={item.caption || ""} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 2 }} />
+            : <PlaceholderPhoto label={item.caption || ""} tone="warm" style={{ width: "100%", height: "100%" }} />
+          }
+        </div>
+        <div style={{
+          display: "flex", flexDirection: "column", justifyContent: "center",
+          padding: "24px 40px 24px 8px"
+        }}>
+          {item.kicker && (
+            <div style={{
+              fontFamily: "'Poppins', sans-serif", fontSize: 13, fontWeight: 500,
+              letterSpacing: "0.24em", textTransform: "uppercase", color: ACCENT
+            }}>{item.kicker}</div>
+          )}
+          <div style={{
+            marginTop: item.kicker ? 18 : 0,
+            fontFamily: "'Clash Display Variable', sans-serif", fontWeight: 300,
+            fontSize: 48, lineHeight: 1.1, color: ACCENT, letterSpacing: "-0.005em"
+          }}>{item.title}</div>
+          <div style={{
+            marginTop: 22,
+            fontFamily: "'Poppins', sans-serif", fontSize: 17, lineHeight: 1.55,
+            color: "rgba(40,35,28,0.72)", textWrap: "pretty"
+          }}>{item.body}</div>
+          <div style={{
+            marginTop: 28, display: "flex", alignItems: "center", gap: 14,
+            fontFamily: "'Poppins', sans-serif", fontSize: 13, fontWeight: 500,
+            letterSpacing: "0.22em", textTransform: "uppercase",
+            color: "rgba(40,35,28,0.45)"
+          }}>
+            <span style={{ fontVariantNumeric: "tabular-nums" }}>
+              {String(safeIdx + 1).padStart(2, "0")} / {String(news.length).padStart(2, "0")}
+            </span>
+            <span style={{ flex: 1, height: 1, background: "rgba(40,35,28,0.12)" }} />
+            <span>Mehr an der Rezeption</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── AufgussBlock ──────────────────────────────────────────────────────────────
+
+function AufgussBlock() {
+  const clock = useClock();
+
+  const toMinutes = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+  const currentMinutes = clock.getHours() * 60 + clock.getMinutes();
+
+  // Derive status: "now" for 15 min after start, "gleich" for 10 min before start
+  const items = AUFGUSS.map((a) => {
+    const start = toMinutes(a.time);
+    let status;
+    if      (currentMinutes >= start + 15) status = "past";
+    else if (currentMinutes >= start)      status = "now";
+    else if (currentMinutes >= start - 10) status = "gleich";
+    else                                   status = "upcoming";
+    return { ...a, status };
+  });
+
+  // Anchor for window: first "now", else first "gleich", else last "past", else 0
+  let anchorIndex = items.findIndex(a => a.status === "now");
+  if (anchorIndex === -1) anchorIndex = items.findIndex(a => a.status === "gleich");
+  if (anchorIndex === -1) {
+    const lastPastIdx = items.reduce((acc, a, i) => a.status === "past" ? i : acc, -1);
+    anchorIndex = lastPastIdx >= 0 ? lastPastIdx : 0;
+  }
+
+  // Window of 5: keep anchor at position 2 (index 1) when possible
+  let windowStart = Math.max(0, anchorIndex - 1);
+  windowStart = Math.min(windowStart, Math.max(0, items.length - 5));
+  const displayed = items.slice(windowStart, windowStart + 5);
+
+  const hasNow   = items.some(a => a.status === "now");
+  const hasGleich = !hasNow && items.some(a => a.status === "gleich");
+
+  return (
+    <div style={{
+      gridArea: "aufguss",
+      padding: "26px 36px",
+      background: "#fff",
+      border: "1px solid rgba(40,35,28,0.10)",
+      borderRadius: 4,
+      display: "flex", flexDirection: "column"
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <SectionLabel>Aufgussplan heute</SectionLabel>
+        {hasNow && (
+          <span style={{
+            fontFamily: "'Poppins', sans-serif", fontSize: 12, fontWeight: 500,
+            letterSpacing: "0.22em", textTransform: "uppercase", color: ACCENT
+          }}>Jetzt läuft</span>
+        )}
+        {hasGleich && (
+          <span style={{
+            fontFamily: "'Poppins', sans-serif", fontSize: 12, fontWeight: 500,
+            letterSpacing: "0.22em", textTransform: "uppercase", color: "oklch(0.65 0.14 78)"
+          }}>Startet gleich</span>
+        )}
+      </div>
+      <div style={{ marginTop: 14, flex: 1, display: "flex", flexDirection: "column" }}>
+        {displayed.map((a, i) => {
+          const past   = a.status === "past";
+          const isNow  = a.status === "now";
+          const gleich = a.status === "gleich";
+          const timeColor = isNow ? ACCENT : gleich ? "oklch(0.65 0.14 78)" : "#2b2720";
+          return (
+            <div key={windowStart + i} style={{
+              display: "grid",
+              gridTemplateColumns: "84px 1fr auto",
+              alignItems: "baseline",
+              padding: "10px 0",
+              borderTop: i === 0 ? "none" : "1px dashed rgba(40,35,28,0.10)",
+              opacity: past ? 0.38 : 1
+            }}>
+              <div style={{
+                fontFamily: "'Clash Display Variable', sans-serif", fontWeight: 300,
+                fontSize: 26, color: timeColor,
+                fontVariantNumeric: "tabular-nums",
+                textDecoration: past ? "line-through" : "none"
+              }}>{a.time}</div>
+              <div style={{
+                fontFamily: "'Poppins', sans-serif", fontSize: 16,
+                color: "#2b2720", display: "flex", alignItems: "center", gap: 12
+              }}>
+                {a.name}
+                {isNow && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 600, letterSpacing: "0.2em",
+                    textTransform: "uppercase", color: ACCENT,
+                    padding: "3px 8px", border: `1px solid ${ACCENT}`, borderRadius: 2
+                  }}>Läuft</span>
+                )}
+                {gleich && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 600, letterSpacing: "0.2em",
+                    textTransform: "uppercase", color: "oklch(0.65 0.14 78)",
+                    padding: "3px 8px", border: "1px solid oklch(0.65 0.14 78)", borderRadius: 2
+                  }}>Gleich</span>
+                )}
+              </div>
+              <div style={{
+                fontFamily: "'Poppins', sans-serif", fontSize: 13,
+                letterSpacing: "0.08em", color: "rgba(40,35,28,0.5)"
+              }}>{a.room}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── ClosingBlock ──────────────────────────────────────────────────────────────
+
+function ClosingBlock({ opening }) {
+  const now = useClock();
+
+  const closeH = opening && !opening.closed && opening.closeH != null ? opening.closeH : 22;
+  const closeM = opening && !opening.closed && opening.closeM != null ? opening.closeM : 0;
+  const close = new Date(now); close.setHours(closeH, closeM, 0, 0);
+  let remaining = close - now;
+  if (remaining < 0) remaining += 24 * 3600 * 1000;
+  const remH = Math.floor(remaining / 3600000);
+  const remM = Math.floor(remaining % 3600000 / 60000);
+
+  const isClosed = opening && opening.closed;
+
+  // Format display time as "HH:MM — HH:MM" from parsed hours, or fall back to raw zeitraum
+  let zeitraumDisplay = "- -";
+  if (opening && !opening.closed) {
+    if (opening.openH != null) {
+      const fmt = (h, m) => `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+      zeitraumDisplay = `${fmt(opening.openH, opening.openM)} — ${fmt(opening.closeH, opening.closeM)}`;
+    } else if (opening.zeitraum) {
+      zeitraumDisplay = opening.zeitraum;
+    }
+  }
+
+  return (
+    <div style={{
+      gridArea: "closing",
+      padding: "26px 32px",
+      background: "oklch(0.93 0.02 312)",
+      borderRadius: 4,
+      display: "flex", flexDirection: "column", justifyContent: "space-between"
+    }}>
+      <SectionLabel>Öffnungszeiten heute</SectionLabel>
+      <div>
+        <div style={{
+          fontFamily: "'Clash Display Variable', sans-serif", fontWeight: 300,
+          fontSize: isClosed ? 40 : 56, lineHeight: 1, color: ACCENT, fontVariantNumeric: "tabular-nums"
+        }}>
+          {isClosed ? "Heute geschlossen" : zeitraumDisplay}
+        </div>
+        {!isClosed && opening && opening.details && (
+          <div style={{
+            marginTop: 14,
+            fontFamily: "'Poppins', sans-serif", fontSize: 15, lineHeight: 1.5,
+            color: "rgba(40,35,28,0.72)"
+          }}>
+            {opening.details}
+          </div>
+        )}
+        {!opening && (
+          <div style={{
+            marginTop: 14,
+            fontFamily: "'Poppins', sans-serif", fontSize: 15, lineHeight: 1.5,
+            color: "rgba(40,35,28,0.72)"
+          }}>
+            Letzter Einlass um 21:00 · Saunagänge bis 21:30.
+          </div>
+        )}
+      </div>
+      <div>
+        {!isClosed && (
+        <div style={{
+          paddingTop: 14, borderTop: "1px solid rgba(40,35,28,0.12)",
+          display: "flex", alignItems: "baseline", justifyContent: "space-between",
+          fontFamily: "'Poppins', sans-serif", fontSize: 13,
+          letterSpacing: "0.08em", color: "rgba(40,35,28,0.6)"
+        }}>
+          <span>Noch geöffnet</span>
+          <span style={{
+            fontFamily: "'Clash Display Variable', sans-serif", fontSize: 24, fontWeight: 300,
+            color: "#2b2720", fontVariantNumeric: "tabular-nums"
+          }}>{remH} Std {String(remM).padStart(2, "0")} Min</span>
+        </div>
+      )}
+      </div>
+    </div>
+  );
+}
+
+// ── StaffMessageBlock ─────────────────────────────────────────────────────────
+
+function StaffMessageBlock({ messages }) {
+  const [idx, setIdx] = React.useState(0);
+
+  React.useEffect(() => { setIdx(0); }, [messages]);
+
+  React.useEffect(() => {
+    if (messages.length <= 1) return;
+    const id = setInterval(() => setIdx(i => (i + 1) % messages.length), CONFIG.slideshowSeconds * 1000);
+    return () => clearInterval(id);
+  }, [messages]);
+
+  const safeIdx = idx % messages.length;
+  const item = messages[safeIdx];
+
+  return (
+    <div style={{
+      gridArea: "staff",
+      padding: "28px 32px",
+      borderRadius: 4,
+      display: "flex", flexDirection: "column",
+      position: "relative", overflow: "hidden",
+      color: "rgb(245,237,227)", background: "rgb(69,12,32)",
+      gap: 14
+    }}>
+      <div style={{
+        position: "absolute", inset: 0,
+        background: "radial-gradient(600px 200px at 100% 0%, rgba(216,122,122,0.22), transparent 60%)",
+        pointerEvents: "none"
+      }} />
+
+      {/* Fixed header + dot indicators */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
+        <SectionLabel style={{ color: "rgba(245,237,227,0.55)" }}>Gruß vom Team</SectionLabel>
+        {messages.length > 1 && (
+          <div style={{ display: "flex", gap: 5 }}>
+            {messages.map((_, i) => (
+              <div key={i} style={{
+                width: 6, height: 6, borderRadius: "50%",
+                background: i === safeIdx ? "rgba(245,237,227,0.75)" : "rgba(245,237,227,0.2)",
+                transition: "background 0.4s ease"
+              }} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Animated slide content */}
+      <div key={safeIdx} style={{
+        flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between",
+        position: "relative",
+        animation: "slideInFromRight 0.5s cubic-bezier(0.22,1,0.36,1) both"
+      }}>
+        <div style={{
+          fontFamily: "'Poppins', sans-serif", fontSize: 11, fontWeight: 500,
+          letterSpacing: "0.26em", textTransform: "uppercase", color: ACCENT
+        }}>{item.label}</div>
+        <div style={{
+          fontFamily: "'Clash Display Variable', sans-serif", fontWeight: 300,
+          fontSize: 28, lineHeight: 1.3, letterSpacing: "0.005em",
+          textWrap: "pretty"
+        }}>
+          „{item.message}"
+        </div>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 14,
+          fontFamily: "'Poppins', sans-serif", fontSize: 13, fontWeight: 500,
+          letterSpacing: "0.22em", textTransform: "uppercase",
+          color: "rgba(245,237,227,0.55)"
+        }}>
+          <span style={{ width: 36, height: 1, background: "rgba(245,237,227,0.25)", display: "inline-block" }} />
+          <span>{item.signature}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+
+function App() {
+  const scale      = useStageScale();
+  const [refreshKey, setRefreshKey] = React.useState(0);
+  const handleRefresh = () => setRefreshKey(k => k + 1);
+  const news           = useNews(refreshKey);
+  const level          = useLoadLevel(refreshKey);
+  const opening        = useOpeningTimes(refreshKey);
+  const staffMessages  = useStaffMessages(refreshKey);
+  const hasNews        = news !== null && news.length > 0;
+  const showNewsColumn = CONFIG.showNews && hasNews;
+  const hasStaff = staffMessages !== null && staffMessages.length > 0;
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "#ece6dc", overflow: "hidden",
+      display: "flex", alignItems: "center", justifyContent: "center"
+    }}>
+      <div style={{ width: 1920 * scale, height: 1080 * scale, position: "relative" }}>
+        <div style={{
+          width: 1920, height: 1080,
+          transform: `scale(${scale})`, transformOrigin: "top left",
+          position: "absolute", top: 0, left: 0,
+          background: "#faf8f4",
+          "--accent": CONFIG.accentHex,
+          display: "flex", flexDirection: "column",
+          
+        }}>
+          <TopBar onRefresh={handleRefresh} />
+
+          {/* Main grid */}
+          <div style={{
+            padding: "28px 48px 0",
+            display: "grid",
+            gridTemplateColumns: showNewsColumn ? "1.1fr 1fr" : "1fr",
+            gridTemplateRows: "auto 1fr",
+            gridTemplateAreas: showNewsColumn
+              ? `"load news" "meta news"`
+              : `"load" "meta"`,
+            gap: 22,
+            height: 640
+          }}>
+            <LoadHero level={level} />
+            <div style={{
+              gridArea: "meta",
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gridTemplateAreas: `"clock weather"`,
+              background: "#fff",
+              border: "1px solid rgba(40,35,28,0.10)",
+              borderRadius: 4
+            }}>
+              <ClockBlock />
+              <WeatherBlock refreshKey={refreshKey} />
+            </div>
+            {showNewsColumn && <NewsSlideshow news={news} seconds={CONFIG.slideshowSeconds} />}
+          </div>
+
+          {/* Bottom rail */}
+          <div style={{
+            padding: "22px 48px 36px",
+            display: "grid",
+            gridTemplateColumns: CONFIG.showAufgussplan
+              ? (hasStaff ? "1.4fr 0.85fr 1.1fr" : "1.4fr 1fr")
+              : (hasStaff ? "1fr 1.3fr"           : "1fr"),
+            gridTemplateAreas: CONFIG.showAufgussplan
+              ? (hasStaff ? `"aufguss closing staff"` : `"aufguss closing"`)
+              : (hasStaff ? `"closing staff"`          : `"closing"`),
+            gap: 22,
+            height: 300
+          }}>
+            {CONFIG.showAufgussplan && <AufgussBlock />}
+            <ClosingBlock opening={opening} />
+            {hasStaff && <StaffMessageBlock messages={staffMessages} />}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
+  </script>
+</body>
+</html>

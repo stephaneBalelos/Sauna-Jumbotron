@@ -1,0 +1,15 @@
+{
+  "name": "sauna-jumbotron",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Saunahuus status jumbotron — standalone HTML TV displays (sauna + baeder).",
+  "scripts": {
+    "build": "node build/build.js"
+  },
+  "type": "commonjs",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^8.0.1",
+    "@babel/preset-react": "^8.0.1"
+  }
+}
