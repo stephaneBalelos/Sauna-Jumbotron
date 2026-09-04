@@ -4,8 +4,8 @@
 const CONFIG = {
   load: "gruen",
   // fallback when loadApiUrl is unset or unavailable: "gruen" | "gelb" | "rot"
-  loadApiUrl: "https://n8n2.stephanedondyas.cloud/webhook/0fba5f17-df93-4083-a1ec-2c355a68156c",
-  // URL returning { status: "gruen"|"gelb"|"rot", label, head, body }
+  loadApiUrl: "https://n8n2.stephanedondyas.cloud/webhook/7a626ab6-5ee0-4320-b530-81fa012c7d5e",
+  // Sauna-area load; URL returning { status: "gruen"|"gelb"|"rot", label, head, body }
   accentHex: "#D87A7A",
   // accent colour (pinkish-red by default)
   logoUrl: "https://cdn.prod.website-files.com/66b1df72c5f8c23c973ec3e2/66c721715f80b6d218e15734_logo-saunahuus.png.webp",
@@ -21,7 +21,9 @@ const CONFIG = {
   weatherLon: 8.5581883,
   newsApiUrl: "https://n8n2.stephanedondyas.cloud/webhook/8fe2c340-13ee-485d-8c66-710c2ef83178",
   // URL returning [{lastPublished, title, body, kicker?, caption?, image?}]
-  openingTimesApiUrl: "https://n8n2.stephanedondyas.cloud/webhook/0750df34-82c9-4cad-b72b-f9f630b68ab8",
+  openingTimesApiUrlSauna: "https://n8n2.stephanedondyas.cloud/webhook/0750df34-82c9-4cad-b72b-f9f630b68ab8",
+  // URL returning [{zeitraum, details, "tage-der-woche"}]
+  openingTimesApiUrlFreibad: "https://n8n2.stephanedondyas.cloud/webhook/4bf2357a-32e5-4c17-82dc-702763324ee3",
   // URL returning [{zeitraum, details, "tage-der-woche"}]
   staffMessagesApiUrl: "https://n8n2.stephanedondyas.cloud/webhook/b5c6baa1-4d50-49ec-bb78-7efa37f07f4e" // URL returning [{label, message, signature}]; leave empty to use STAFF_MESSAGES fallback
 };
@@ -274,13 +276,13 @@ function useLoadLevel(refreshKey) {
   }, [refreshKey]);
   return level;
 }
-function useOpeningTimes(refreshKey) {
+function useOpeningTimes(url, refreshKey) {
   const [opening, setOpening] = React.useState(null);
   React.useEffect(() => {
-    if (!CONFIG.openingTimesApiUrl) return;
+    if (!url) return;
     async function fetchOpening() {
       try {
-        const res = await fetch(CONFIG.openingTimesApiUrl);
+        const res = await fetch(url);
         if (!res.ok) throw new Error("fetch failed");
         const data = await res.json();
         console.log("Fetched opening times data:", data);
@@ -318,7 +320,7 @@ function useOpeningTimes(refreshKey) {
     fetchOpening();
     const id = setInterval(fetchOpening, 30 * 60 * 1000); // refresh every 30 min
     return () => clearInterval(id);
-  }, [refreshKey]);
+  }, [url, refreshKey]);
   return opening;
 }
 function useStaffMessages(refreshKey) {
@@ -391,7 +393,7 @@ function SectionLabel({
       fontFamily: "'Poppins', sans-serif",
       fontSize: 13,
       fontWeight: 500,
-      letterSpacing: "0.22em",
+      letterSpacing: "0.12em",
       textTransform: "uppercase",
       color: "rgba(40,35,28,0.45)",
       ...style
@@ -480,7 +482,7 @@ function TopBar({
       textTransform: "uppercase",
       color: "rgba(40,35,28,0.55)"
     }
-  }, "Live · gerade eben aktualisiert")), /*#__PURE__*/React.createElement("button", {
+  }, "Live · aktualisiert gerade eben")), /*#__PURE__*/React.createElement("button", {
     onClick: handleRefresh,
     title: "Alle Daten neu laden",
     style: {
@@ -531,7 +533,7 @@ function ClockBlock() {
       gridArea: "clock",
       display: "flex",
       flexDirection: "column",
-      justifyContent: "space-between",
+      justifyContent: "space-around",
       padding: "28px 36px",
       borderRight: "1px solid rgba(40,35,28,0.10)"
     }
@@ -691,10 +693,10 @@ function WeatherBlock({
       gridArea: "weather",
       display: "flex",
       flexDirection: "column",
-      justifyContent: "space-between",
+      justifyContent: "space-around",
       padding: "28px 36px"
     }
-  }, /*#__PURE__*/React.createElement(SectionLabel, null, "Draußen"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(SectionLabel, null, "Wetter draußen"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "flex-end",
@@ -743,7 +745,7 @@ function WeatherBlock({
       color: "rgba(40,35,28,0.55)",
       fontVariantNumeric: "tabular-nums"
     }
-  }, "H ", hi, "° \xA0·\xA0 T ", lo, "°")));
+  }, "H ", hi, "° \xA0·\xA0 T ", lo, "°"))));
 }
 
 // ── LoadHero ──────────────────────────────────────────────────────────────────
@@ -900,7 +902,8 @@ function LoadHero({
   }, /*#__PURE__*/React.createElement(SectionLabel, {
     style: {
       color: level.color,
-      opacity: 0.8
+      opacity: 1,
+      fontSize: 28
     }
   }, "Aktuelle Auslastung Sauna"), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -926,7 +929,7 @@ function LoadHero({
     style: {
       marginTop: 12,
       fontFamily: "'Poppins', sans-serif",
-      fontSize: 17,
+      fontSize: 24,
       lineHeight: 1.55,
       color: "rgba(40,35,28,0.65)",
       maxWidth: 620
@@ -1070,7 +1073,7 @@ function NewsSlideshow({
     style: {
       marginTop: 22,
       fontFamily: "'Poppins', sans-serif",
-      fontSize: 17,
+      fontSize: 22,
       lineHeight: 1.55,
       color: "rgba(40,35,28,0.72)",
       textWrap: "pretty"
@@ -1246,7 +1249,9 @@ function AufgussBlock() {
 // ── ClosingBlock ──────────────────────────────────────────────────────────────
 
 function ClosingBlock({
-  opening
+  opening,
+  label,
+  area
 }) {
   const now = useClock();
   const closeH = opening && !opening.closed && opening.closeH != null ? opening.closeH : 22;
@@ -1271,7 +1276,7 @@ function ClosingBlock({
   }
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      gridArea: "closing",
+      gridArea: area,
       padding: "26px 32px",
       background: "oklch(0.93 0.02 312)",
       borderRadius: 4,
@@ -1279,7 +1284,17 @@ function ClosingBlock({
       flexDirection: "column",
       justifyContent: "space-between"
     }
-  }, /*#__PURE__*/React.createElement(SectionLabel, null, "Öffnungszeiten heute"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(SectionLabel, null, "Öffnungszeiten heute"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontFamily: "'Poppins', sans-serif",
+      fontSize: 24,
+      fontWeight: 500,
+      letterSpacing: "0.22em",
+      textTransform: "uppercase",
+      color: "#2b2720",
+      margin: '0 0 8px'
+    }
+  }, label), /*#__PURE__*/React.createElement("div", {
     style: {
       fontFamily: "'Clash Display Variable', sans-serif",
       fontWeight: 300,
@@ -1296,15 +1311,7 @@ function ClosingBlock({
       lineHeight: 1.5,
       color: "rgba(40,35,28,0.72)"
     }
-  }, opening.details), !opening && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 14,
-      fontFamily: "'Poppins', sans-serif",
-      fontSize: 15,
-      lineHeight: 1.5,
-      color: "rgba(40,35,28,0.72)"
-    }
-  }, "Letzter Einlass um 21:00 · Saunagänge bis 21:30.")), /*#__PURE__*/React.createElement("div", null, !isClosed && /*#__PURE__*/React.createElement("div", {
+  }, opening.details)), /*#__PURE__*/React.createElement("div", null, !isClosed && /*#__PURE__*/React.createElement("div", {
     style: {
       paddingTop: 14,
       borderTop: "1px solid rgba(40,35,28,0.12)",
@@ -1446,7 +1453,8 @@ function App() {
   const handleRefresh = () => setRefreshKey(k => k + 1);
   const news = useNews(refreshKey);
   const level = useLoadLevel(refreshKey);
-  const opening = useOpeningTimes(refreshKey);
+  const openingFreibad = useOpeningTimes(CONFIG.openingTimesApiUrlFreibad, refreshKey);
+  const openingSauna = useOpeningTimes(CONFIG.openingTimesApiUrlSauna, refreshKey);
   const staffMessages = useStaffMessages(refreshKey);
   const hasNews = news !== null && news.length > 0;
   const showNewsColumn = CONFIG.showNews && hasNews;
@@ -1487,9 +1495,9 @@ function App() {
     style: {
       padding: "28px 48px 0",
       display: "grid",
-      gridTemplateColumns: showNewsColumn ? "1.1fr 1fr" : "1fr",
+      gridTemplateColumns: showNewsColumn ? "1fr 1fr" : "1fr 1fr 1fr",
       gridTemplateRows: "auto 1fr",
-      gridTemplateAreas: showNewsColumn ? `"load news" "meta news"` : `"load" "meta"`,
+      gridTemplateAreas: showNewsColumn ? `"load news" "meta news"` : `"load load meta" "load load meta"`,
       gap: 22,
       height: 640
     }
@@ -1499,8 +1507,8 @@ function App() {
     style: {
       gridArea: "meta",
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gridTemplateAreas: `"clock weather"`,
+      gridTemplateColumns: "1fr",
+      gridTemplateAreas: `"clock" "weather"`,
       background: "#fff",
       border: "1px solid rgba(40,35,28,0.10)",
       borderRadius: 4
@@ -1514,13 +1522,19 @@ function App() {
     style: {
       padding: "22px 48px 36px",
       display: "grid",
-      gridTemplateColumns: CONFIG.showAufgussplan ? hasStaff ? "1.4fr 0.85fr 1.1fr" : "1.4fr 1fr" : hasStaff ? "1fr 1.3fr" : "1fr",
-      gridTemplateAreas: CONFIG.showAufgussplan ? hasStaff ? `"aufguss closing staff"` : `"aufguss closing"` : hasStaff ? `"closing staff"` : `"closing"`,
+      gridTemplateColumns: CONFIG.showAufgussplan ? hasStaff ? "1.2fr 1fr 1fr 1.3fr" : "1.2fr 1fr 1fr" : hasStaff ? "1fr 1fr 1.3fr" : "1fr 1fr",
+      gridTemplateAreas: CONFIG.showAufgussplan ? hasStaff ? `"aufguss freibad sauna staff"` : `"aufguss freibad sauna"` : hasStaff ? `"freibad sauna staff"` : `"freibad sauna"`,
       gap: 22,
       height: 300
     }
   }, CONFIG.showAufgussplan && /*#__PURE__*/React.createElement(AufgussBlock, null), /*#__PURE__*/React.createElement(ClosingBlock, {
-    opening: opening
+    opening: openingFreibad,
+    label: "Freibad",
+    area: "freibad"
+  }), /*#__PURE__*/React.createElement(ClosingBlock, {
+    opening: openingSauna,
+    label: "Sauna",
+    area: "sauna"
   }), hasStaff && /*#__PURE__*/React.createElement(StaffMessageBlock, {
     messages: staffMessages
   })))));
