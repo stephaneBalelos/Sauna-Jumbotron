@@ -68,8 +68,6 @@
       // URL returning [{lastPublished, title, body, kicker?, caption?, image?}]
       openingTimesApiUrlSauna: "https://n8n2.stephanedondyas.cloud/webhook/0750df34-82c9-4cad-b72b-f9f630b68ab8",
       // URL returning [{zeitraum, details, "tage-der-woche"}]
-      openingTimesApiUrlFreibad: "https://n8n2.stephanedondyas.cloud/webhook/4bf2357a-32e5-4c17-82dc-702763324ee3",
-      // URL returning [{zeitraum, details, "tage-der-woche"}]
       staffMessagesApiUrl: "https://n8n2.stephanedondyas.cloud/webhook/b5c6baa1-4d50-49ec-bb78-7efa37f07f4e" // URL returning [{label, message, signature}]; leave empty to use STAFF_MESSAGES fallback
     };
 
@@ -1498,7 +1496,6 @@
       const handleRefresh = () => setRefreshKey(k => k + 1);
       const news = useNews(refreshKey);
       const level = useLoadLevel(refreshKey);
-      const openingFreibad = useOpeningTimes(CONFIG.openingTimesApiUrlFreibad, refreshKey);
       const openingSauna = useOpeningTimes(CONFIG.openingTimesApiUrlSauna, refreshKey);
       const staffMessages = useStaffMessages(refreshKey);
       const hasNews = news !== null && news.length > 0;
@@ -1568,15 +1565,11 @@
           padding: "22px 48px 36px",
           display: "grid",
           gridTemplateColumns: CONFIG.showAufgussplan ? hasStaff ? "1.2fr 1fr 1fr 1.3fr" : "1.2fr 1fr 1fr" : hasStaff ? "1fr 1fr 1.3fr" : "1fr 1fr",
-          gridTemplateAreas: CONFIG.showAufgussplan ? hasStaff ? `"aufguss freibad sauna staff"` : `"aufguss freibad sauna"` : hasStaff ? `"freibad sauna staff"` : `"freibad sauna"`,
+          gridTemplateAreas: CONFIG.showAufgussplan ? hasStaff ? `"aufguss sauna sauna staff"` : `"aufguss sauna sauna"` : hasStaff ? `"sauna sauna staff"` : `"sauna sauna"`,
           gap: 22,
           height: 300
         }
       }, CONFIG.showAufgussplan && /*#__PURE__*/React.createElement(AufgussBlock, null), /*#__PURE__*/React.createElement(ClosingBlock, {
-        opening: openingFreibad,
-        label: "Freibad",
-        area: "freibad"
-      }), /*#__PURE__*/React.createElement(ClosingBlock, {
         opening: openingSauna,
         label: "Sauna",
         area: "sauna"
